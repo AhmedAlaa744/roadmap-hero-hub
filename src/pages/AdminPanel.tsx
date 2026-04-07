@@ -205,7 +205,25 @@ const AdminPanel = () => {
                   <p className="font-medium text-foreground truncate">{p.name_en}</p>
                   <p className="text-xs text-muted-foreground">{p.stores?.name_en || "Store"}</p>
                 </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${p.is_active ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                  {p.is_active ? "Active" : "Pending"}
+                </span>
                 <p className="text-sm font-bold text-primary">EGP {Number(p.price).toLocaleString()}</p>
+                <div className="flex gap-1">
+                  {!p.is_active && (
+                    <Button size="sm" onClick={() => toggleProductActive(p.id, true)}>
+                      <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                    </Button>
+                  )}
+                  {p.is_active && (
+                    <Button size="sm" variant="outline" onClick={() => toggleProductActive(p.id, false)}>
+                      Hide
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => deleteProduct(p.id)}>
+                    <XCircle className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))}
           </TabsContent>

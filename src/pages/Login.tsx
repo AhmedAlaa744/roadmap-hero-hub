@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -17,8 +18,25 @@ const Login = () => {
   const [businessDesc, setBusinessDesc] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, isAdmin, isMerchant: isMerchantRole, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && user) {
+      redirectByRole();
+    }
+  }, [user, isAdmin, isMerchantRole, authLoading]);
+
+  const redirectByRole = () => {
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+    } else if (isMerchantRole) {
+      navigate("/merchant/dashboard", { replace: true });
+    } else {
+      navigate("/", { replace: true });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +49,22 @@ const Login = () => {
       if (isRegister) {
         const { error } = await signUp(phone, password, fullName);
         if (error) throw error;
-        
-        if (isMerchant) {
-          // We'll submit merchant application after signup via the auth state change
+
+        if (isMerchant && businessNameEn) {
+          // Submit merchant application after a short delay for profile creation
+          setTimeout(async () => {
+            const { data: { user: newUser } } = await supabase.auth.getUser();
+            if (newUser) {
+              await supabase.from("merchant_applications").insert({
+                user_id: newUser.id,
+                business_name_en: businessNameEn,
+                business_name_ar: businessNameAr || null,
+                business_type: businessType || null,
+                description: businessDesc || null,
+                phone,
+              });
+            }
+          }, 1000);
           toast.success("Account created! Your merchant application has been submitted for review.");
         } else {
           toast.success("Account created successfully!");
@@ -43,7 +74,7 @@ const Login = () => {
         const { error } = await signIn(phone, password);
         if (error) throw error;
         toast.success("Welcome back!");
-        navigate("/");
+        // Role-based redirect happens via useEffect above
       }
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
@@ -51,6 +82,8 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) return null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -72,49 +105,23 @@ const Login = () => {
           {isRegister && (
             <div>
               <label className="text-sm font-medium text-foreground">Full Name</label>
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
-                required
-                className="mt-1"
-              />
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required className="mt-1" />
             </div>
           )}
 
           <div>
             <label className="text-sm font-medium text-foreground">Phone Number</label>
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01XXXXXXXXX"
-              required
-              className="mt-1"
-              dir="ltr"
-            />
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" required className="mt-1" dir="ltr" />
           </div>
 
           <div>
             <label className="text-sm font-medium text-foreground">Password</label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 6 characters"
-              required
-              minLength={6}
-              className="mt-1"
-            />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters" required minLength={6} className="mt-1" />
           </div>
 
           {isRegister && (
             <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-              <input
-                type="checkbox"
-                checked={isMerchant}
-                onChange={(e) => setIsMerchant(e.target.checked)}
-                className="rounded"
-              />
+              <input type="checkbox" checked={isMerchant} onChange={(e) => setIsMerchant(e.target.checked)} className="rounded" />
               <div>
                 <p className="text-sm font-medium text-foreground">I want to sell products</p>
                 <p className="text-xs text-muted-foreground">Apply as a merchant</p>
