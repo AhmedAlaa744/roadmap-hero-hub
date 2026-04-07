@@ -34,24 +34,6 @@ interface DbCategory {
   sort_order: number;
 }
 
-const toProduct = (p: DbProduct) => ({
-  id: p.id,
-  name_en: p.name_en,
-  name_ar: p.name_ar || "",
-  description_en: p.description_en || "",
-  description_ar: p.description_ar || "",
-  price: Number(p.price),
-  category: p.categories?.name_en || "",
-  condition: p.condition as "new" | "used" | "used_as_new",
-  pricing_model: p.pricing_model as "fixed" | "negotiable" | "auction",
-  images: p.images && p.images.length > 0 ? p.images : ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"],
-  store_name: p.stores?.name_en || "Store",
-  store_id: p.store_id,
-  rating: 4.5,
-  reviews_count: 0,
-  in_stock: p.stock > 0,
-});
-
 const Index = () => {
   const [categories, setCategories] = useState<DbCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
