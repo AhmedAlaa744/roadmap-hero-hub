@@ -2,27 +2,28 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ShoppingCart, Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, profile } = useAuth();
+  const { totalItems } = useCart();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      {/* Top bar */}
       <div className="bg-primary px-4 py-1.5 text-center text-sm font-medium text-primary-foreground">
         🏘️ Serving Dar Misr Al-Andalus • 5th Settlement • New Cairo
       </div>
 
       <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <span className="text-2xl font-extrabold text-primary">جارك</span>
           <span className="hidden sm:block text-sm font-semibold text-muted-foreground">Garak</span>
         </Link>
 
-        {/* Search */}
         <div className="hidden md:flex flex-1 max-w-xl">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -36,7 +37,6 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLang(lang === "en" ? "ar" : "en")}
@@ -48,28 +48,32 @@ const Header = () => {
           <Link to="/cart" className="relative">
             <Button variant="ghost" size="icon" className="text-foreground">
               <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
-                3
-              </span>
+              {totalItems > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+                  {totalItems}
+                </span>
+              )}
             </Button>
           </Link>
 
-          <Link to="/login">
+          <Link to={user ? "/account" : "/login"}>
             <Button variant="ghost" size="icon" className="text-foreground">
-              <User className="h-5 w-5" />
+              {user && profile?.full_name ? (
+                <span className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                  {profile.full_name.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <User className="h-5 w-5" />
+              )}
             </Button>
           </Link>
 
-          <button
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
+          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile search */}
       <div className="md:hidden px-4 pb-3">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -83,7 +87,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {isMenuOpen && (
         <nav className="md:hidden border-t border-border bg-card px-4 py-4 space-y-3">
           <Link to="/browse" className="block text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Browse All</Link>

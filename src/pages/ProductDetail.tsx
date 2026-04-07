@@ -6,6 +6,8 @@ import ProductCard from "@/components/ProductCard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useState } from "react";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 
 const conditionStyles = {
   new: "bg-success/15 text-success border-success/30",
@@ -19,6 +21,7 @@ const ProductDetail = () => {
   const product = products.find((p) => p.id === id);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const { addToCart } = useCart();
 
   if (!product) {
     return (
@@ -114,7 +117,7 @@ const ProductDetail = () => {
                     <span className="px-4 py-2 text-sm font-semibold text-foreground">{quantity}</span>
                     <button onClick={() => setQuantity(quantity + 1)} className="px-3 py-2 text-foreground hover:bg-muted">+</button>
                   </div>
-                  <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
+                  <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" onClick={() => { addToCart(product, quantity); toast.success("Added to cart!"); }}>
                     <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
                   </Button>
                 </>

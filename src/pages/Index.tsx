@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, TrendingUp, Sparkles } from "lucide-react";
+import { ArrowRight, TrendingUp, Sparkles, ShieldCheck, Truck, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { categories, products } from "@/data/mockData";
 import ProductCard from "@/components/ProductCard";
@@ -23,6 +23,7 @@ const Index = () => {
         </div>
         <div className="relative container mx-auto px-4 py-20 md:py-32">
           <div className="max-w-lg space-y-6 animate-fade-in">
+            <p className="text-lg text-primary font-semibold" dir="rtl">جارك — سوق جيرانك</p>
             <h1 className="text-4xl md:text-5xl font-extrabold text-card leading-tight">
               Shop Local,<br />
               <span className="text-primary">Trust Your Neighbors</span>
@@ -37,6 +38,11 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
+                  Log In
+                </Button>
+              </Link>
               <Link to="/merchant/apply">
                 <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
                   Become a Seller
@@ -44,6 +50,48 @@ const Index = () => {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Trust Banner */}
+      <section className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { icon: ShieldCheck, label: "Verified Merchants", sublabel: "تجار موثقين", color: "text-primary" },
+              { icon: Truck, label: "Compound Delivery", sublabel: "توصيل داخل الكمبوند", color: "text-success" },
+              { icon: Star, label: "Rated & Reviewed", sublabel: "تقييمات حقيقية", color: "text-warning" },
+              { icon: Users, label: "Your Neighbors", sublabel: "جيرانك", color: "text-accent" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <item.icon className={`h-8 w-8 ${item.color} shrink-0`} />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground" dir="rtl">{item.sublabel}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How Garak Works */}
+      <section className="container mx-auto px-4 py-14">
+        <h2 className="text-2xl font-bold text-foreground text-center mb-2">How Garak Works</h2>
+        <p className="text-sm text-muted-foreground text-center mb-10" dir="rtl">إزاي جارك بيشتغل</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { step: "1", title: "Browse & Discover", subtitle: "تصفح واكتشف", desc: "Explore products from verified merchants in your compound." },
+            { step: "2", title: "Add to Cart & Order", subtitle: "اطلب وادفع", desc: "Add items to your cart and checkout with your building address." },
+            { step: "3", title: "Receive at Your Door", subtitle: "استلم عند بابك", desc: "Get your order delivered right to your apartment in the compound." },
+          ].map((s) => (
+            <div key={s.step} className="text-center space-y-3">
+              <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mx-auto">{s.step}</div>
+              <h3 className="font-bold text-foreground">{s.title}</h3>
+              <p className="text-xs text-muted-foreground" dir="rtl">{s.subtitle}</p>
+              <p className="text-sm text-muted-foreground">{s.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -66,6 +114,26 @@ const Index = () => {
               <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{cat.name_en}</span>
               <span className="text-[10px] text-muted-foreground">{cat.product_count} items</span>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Product Condition Explainer */}
+      <section className="container mx-auto px-4 py-10">
+        <h2 className="text-xl font-bold text-foreground mb-6">Product Conditions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { label: "New", labelAr: "جديد", desc: "Brand new, unused, sealed or with tags", color: "bg-success/15 text-success border-success/30" },
+            { label: "Used as New", labelAr: "مستعمل كالجديد", desc: "Like new condition, barely used, no defects", color: "bg-primary/15 text-primary border-primary/30" },
+            { label: "Used", labelAr: "مستعمل", desc: "Previously owned, may show signs of use", color: "bg-accent/15 text-accent border-accent/30" },
+          ].map((c) => (
+            <div key={c.label} className="rounded-xl border border-border bg-card p-4 flex items-start gap-3">
+              <span className={`rounded-full border px-3 py-1 text-sm font-semibold shrink-0 ${c.color}`}>{c.label}</span>
+              <div>
+                <p className="text-xs text-muted-foreground" dir="rtl">{c.labelAr}</p>
+                <p className="text-sm text-muted-foreground mt-1">{c.desc}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>
