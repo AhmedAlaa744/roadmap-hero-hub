@@ -8,25 +8,23 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
 
-interface DbProduct {
-  id: string;
-  name_en: string;
-  name_ar: string | null;
-  description_en: string | null;
-  description_ar: string | null;
-  price: number;
-  condition: "new" | "used" | "used_as_new";
-  pricing_model: "fixed" | "negotiable" | "auction";
-  images: string[] | null;
-  stock: number;
-  store_id: string;
-  category_id: string;
-  is_active: boolean;
-  stores: { name_en: string } | null;
-  categories: { name_en: string } | null;
-  rating?: number;
-  reviews_count?: number;
-}
+const toProduct = (p: any) => ({
+  id: p.id,
+  name_en: p.name_en,
+  name_ar: p.name_ar || "",
+  description_en: p.description_en || "",
+  description_ar: p.description_ar || "",
+  price: Number(p.price),
+  category: p.categories?.name_en || "",
+  condition: p.condition as "new" | "used" | "used_as_new",
+  pricing_model: p.pricing_model as "fixed" | "negotiable" | "auction",
+  images: p.images && p.images.length > 0 ? p.images : ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"],
+  store_name: p.stores?.name_en || "Store",
+  store_id: p.store_id,
+  rating: 4.5,
+  reviews_count: 0,
+  in_stock: p.stock > 0,
+});
 
 interface DbCategory {
   id: string;

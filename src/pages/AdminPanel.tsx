@@ -81,6 +81,18 @@ const AdminPanel = () => {
     fetchAll();
   };
 
+  const toggleProductActive = async (id: string, active: boolean) => {
+    await supabase.from("products").update({ is_active: active }).eq("id", id);
+    toast.success(active ? "Product approved" : "Product hidden");
+    fetchAll();
+  };
+
+  const deleteProduct = async (id: string) => {
+    await supabase.from("products").delete().eq("id", id);
+    toast.success("Product deleted");
+    fetchAll();
+  };
+
   if (authLoading || loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Loading...</div></div>;
 
   return (
