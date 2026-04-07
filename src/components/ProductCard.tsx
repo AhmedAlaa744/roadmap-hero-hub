@@ -60,6 +60,11 @@ const ProductCard = ({ product }: { product: Product }) => {
         <p className="text-lg font-bold text-primary">
           EGP {product.price.toLocaleString()}
         </p>
+        {product.condition === "used" && (
+          <span className="inline-block mt-1 text-xs font-semibold text-accent bg-accent/10 rounded-full px-2.5 py-0.5">
+            Offer Price
+          </span>
+        )}
       </div>
     </Link>
   );

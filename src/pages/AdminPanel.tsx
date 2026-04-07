@@ -81,6 +81,18 @@ const AdminPanel = () => {
     fetchAll();
   };
 
+  const toggleProductActive = async (id: string, active: boolean) => {
+    await supabase.from("products").update({ is_active: active }).eq("id", id);
+    toast.success(active ? "Product approved" : "Product hidden");
+    fetchAll();
+  };
+
+  const deleteProduct = async (id: string) => {
+    await supabase.from("products").delete().eq("id", id);
+    toast.success("Product deleted");
+    fetchAll();
+  };
+
   if (authLoading || loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Loading...</div></div>;
 
   return (
@@ -205,7 +217,25 @@ const AdminPanel = () => {
                   <p className="font-medium text-foreground truncate">{p.name_en}</p>
                   <p className="text-xs text-muted-foreground">{p.stores?.name_en || "Store"}</p>
                 </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${p.is_active ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                  {p.is_active ? "Active" : "Pending"}
+                </span>
                 <p className="text-sm font-bold text-primary">EGP {Number(p.price).toLocaleString()}</p>
+                <div className="flex gap-1">
+                  {!p.is_active && (
+                    <Button size="sm" onClick={() => toggleProductActive(p.id, true)}>
+                      <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                    </Button>
+                  )}
+                  {p.is_active && (
+                    <Button size="sm" variant="outline" onClick={() => toggleProductActive(p.id, false)}>
+                      Hide
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => deleteProduct(p.id)}>
+                    <XCircle className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))}
           </TabsContent>

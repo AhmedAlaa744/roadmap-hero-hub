@@ -1,15 +1,59 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, TrendingUp, Sparkles, ShieldCheck, Truck, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { categories, products } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
 
+const toProduct = (p: any) => ({
+  id: p.id,
+  name_en: p.name_en,
+  name_ar: p.name_ar || "",
+  description_en: p.description_en || "",
+  description_ar: p.description_ar || "",
+  price: Number(p.price),
+  category: p.categories?.name_en || "",
+  condition: p.condition as "new" | "used" | "used_as_new",
+  pricing_model: p.pricing_model as "fixed" | "negotiable" | "auction",
+  images: p.images && p.images.length > 0 ? p.images : ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"],
+  store_name: p.stores?.name_en || "Store",
+  store_id: p.store_id,
+  rating: 4.5,
+  reviews_count: 0,
+  in_stock: p.stock > 0,
+});
+
+interface DbCategory {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  icon: string;
+  sort_order: number;
+}
+
 const Index = () => {
-  const featuredProducts = products.slice(0, 4);
-  const trendingProducts = products.slice(4, 8);
+  const [categories, setCategories] = useState<DbCategory[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [catRes, prodRes] = await Promise.all([
+        supabase.from("categories").select("*").order("sort_order"),
+        supabase.from("products").select("*, stores(name_en), categories(name_en)").eq("is_active", true).limit(8),
+      ]);
+      setCategories(catRes.data || []);
+      const prods = (prodRes.data || []).map(toProduct);
+      setFeaturedProducts(prods.slice(0, 4));
+      setTrendingProducts(prods.slice(4, 8));
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,7 +156,6 @@ const Index = () => {
             >
               <span className="text-3xl">{cat.icon}</span>
               <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{cat.name_en}</span>
-              <span className="text-[10px] text-muted-foreground">{cat.product_count} items</span>
             </Link>
           ))}
         </div>
@@ -144,27 +187,35 @@ const Index = () => {
           <Sparkles className="h-5 w-5 text-accent" />
           <h2 className="text-2xl font-bold text-foreground">Featured Products</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
-
-      {/* Trending */}
-      <section className="bg-mint/40 py-14">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-2 mb-8">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-bold text-foreground">Trending Now</h2>
-          </div>
+        {loading ? (
+          <p className="text-center text-muted-foreground py-8">Loading products...</p>
+        ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {trendingProducts.map((product) => (
+            {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-8">No products yet. Be the first to list!</p>
+        )}
       </section>
+
+      {/* Trending */}
+      {trendingProducts.length > 0 && (
+        <section className="bg-mint/40 py-14">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-2 mb-8">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <h2 className="text-2xl font-bold text-foreground">Trending Now</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {trendingProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="container mx-auto px-4 py-16">
