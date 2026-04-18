@@ -86,7 +86,11 @@ const Account = () => {
         ) : (
           <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order.id} className="rounded-xl border border-border bg-card p-4">
+              <Link
+                key={order.id}
+                to={`/order/${order.id}`}
+                className="block rounded-xl border border-border bg-card p-4 hover:border-primary hover:shadow-md transition-all"
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-semibold text-foreground">{order.order_number}</p>
@@ -94,15 +98,16 @@ const Account = () => {
                   </div>
                   <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                     order.status === "delivered" ? "bg-success/10 text-success" :
-                    order.status === "confirmed" ? "bg-primary/10 text-primary" :
+                    order.status === "confirmed" || order.status === "preparing" || order.status === "out_for_delivery" ? "bg-primary/10 text-primary" :
                     order.status === "cancelled" ? "bg-destructive/10 text-destructive" :
                     "bg-warning/10 text-warning"
                   }`}>
-                    {order.status}
+                    {order.status.replace(/_/g, " ")}
                   </span>
                 </div>
                 <p className="text-primary font-bold mt-2">EGP {Number(order.total).toLocaleString()}</p>
-              </div>
+                <p className="text-xs text-primary mt-1">Track order →</p>
+              </Link>
             ))}
           </div>
         )}
