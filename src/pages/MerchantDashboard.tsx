@@ -275,19 +275,32 @@ const MerchantDashboard = () => {
                       <p className="font-semibold text-foreground">{o.order_number}</p>
                       <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</p>
                     </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
                       o.status === "delivered" ? "bg-success/10 text-success" :
-                      o.status === "confirmed" ? "bg-primary/10 text-primary" :
                       o.status === "cancelled" ? "bg-destructive/10 text-destructive" :
-                      "bg-warning/10 text-warning"
-                    }`}>{o.status}</span>
+                      o.status === "pending" ? "bg-warning/10 text-warning" :
+                      "bg-primary/10 text-primary"
+                    }`}>{o.status.replace(/_/g, " ")}</span>
                   </div>
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
-                  {o.status === "pending" && (
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" onClick={() => updateOrderStatus(o.id, "confirmed")}><CheckCircle className="h-3 w-3 mr-1" /> Confirm</Button>
-                      <Button size="sm" variant="outline" className="text-destructive" onClick={() => updateOrderStatus(o.id, "cancelled")}><XCircle className="h-3 w-3 mr-1" /> Cancel</Button>
+                  {o.status !== "delivered" && o.status !== "cancelled" && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {o.status === "pending" && (
+                        <>
+                          <Button size="sm" onClick={() => updateOrderStatus(o.id, "confirmed")}><CheckCircle className="h-3 w-3 mr-1" /> Confirm</Button>
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => updateOrderStatus(o.id, "cancelled")}><XCircle className="h-3 w-3 mr-1" /> Cancel</Button>
+                        </>
+                      )}
+                      {o.status === "confirmed" && (
+                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "preparing")}>Mark Preparing</Button>
+                      )}
+                      {o.status === "preparing" && (
+                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "out_for_delivery")}>Out for Delivery</Button>
+                      )}
+                      {o.status === "out_for_delivery" && (
+                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "delivered")}><CheckCircle className="h-3 w-3 mr-1" /> Mark Delivered</Button>
+                      )}
                     </div>
                   )}
                 </div>
