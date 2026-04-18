@@ -56,17 +56,53 @@ const Header = () => {
             </Button>
           </Link>
 
-          <Link to={user ? "/account" : "/login"}>
-            <Button variant="ghost" size="icon" className="text-foreground">
-              {user && profile?.full_name ? (
-                <span className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                  {profile.full_name.charAt(0).toUpperCase()}
-                </span>
-              ) : (
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-foreground">
+                  {profile?.full_name ? (
+                    <span className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      {profile.full_name.charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-card z-50">
+                <DropdownMenuLabel className="truncate">{profile?.full_name || "Account"}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/account")}>
+                  <User className="h-4 w-4 mr-2" /> My Account
+                </DropdownMenuItem>
+                {isMerchant && (
+                  <DropdownMenuItem onClick={() => navigate("/merchant/dashboard")}>
+                    <LayoutDashboard className="h-4 w-4 mr-2" /> Merchant Dashboard
+                  </DropdownMenuItem>
+                )}
+                {!isMerchant && !isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/merchant/apply")}>
+                    <LayoutDashboard className="h-4 w-4 mr-2" /> Become a Seller
+                  </DropdownMenuItem>
+                )}
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <Shield className="h-4 w-4 mr-2" /> Admin Panel
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button variant="ghost" size="icon" className="text-foreground">
                 <User className="h-5 w-5" />
-              )}
-            </Button>
-          </Link>
+              </Button>
+            </Link>
+          )}
 
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
