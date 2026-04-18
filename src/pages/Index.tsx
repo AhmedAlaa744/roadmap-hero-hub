@@ -237,19 +237,21 @@ const Index = () => {
       )}
 
       {/* CTA */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="rounded-2xl bg-primary p-8 md:p-14 text-center space-y-5">
-          <h2 className="text-3xl font-extrabold text-primary-foreground">Start Selling Today</h2>
-          <p className="text-primary-foreground/80 max-w-md mx-auto font-body">
-            Join your neighbors on Garak. List up to 20 products for free and reach buyers in your compound.
-          </p>
-          <Link to="/merchant/apply">
-            <Button size="lg" className="bg-card text-primary hover:bg-card/90 font-semibold px-10 mt-2">
-              Apply as Merchant
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {!isMerchant && (
+        <section className="container mx-auto px-4 py-16">
+          <div className="rounded-2xl bg-primary p-8 md:p-14 text-center space-y-5">
+            <h2 className="text-3xl font-extrabold text-primary-foreground">Start Selling Today</h2>
+            <p className="text-primary-foreground/80 max-w-md mx-auto font-body">
+              Join your neighbors on Garak. List up to 20 products for free and reach buyers in your compound.
+            </p>
+            <Link to="/merchant/apply">
+              <Button size="lg" className="bg-card text-primary hover:bg-card/90 font-semibold px-10 mt-2">
+                Apply as Merchant
+              </Button>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <Footer />
     </div>
