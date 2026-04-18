@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, TrendingUp, Sparkles, ShieldCheck, Truck, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import ProductCard from "@/components/ProductCard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -35,6 +36,7 @@ interface DbCategory {
 }
 
 const Index = () => {
+  const { user, isAdmin, isMerchant } = useAuth();
   const [categories, setCategories] = useState<DbCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
@@ -82,16 +84,33 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
-                  Log In
-                </Button>
-              </Link>
-              <Link to="/merchant/apply">
-                <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
-                  Become a Seller
-                </Button>
-              </Link>
+              {!user && (
+                <Link to="/login">
+                  <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
+                    Log In
+                  </Button>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
+                    Admin Panel
+                  </Button>
+                </Link>
+              )}
+              {isMerchant ? (
+                <Link to="/merchant/dashboard">
+                  <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
+                    My Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/merchant/apply">
+                  <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
+                    Become a Seller
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -218,19 +237,21 @@ const Index = () => {
       )}
 
       {/* CTA */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="rounded-2xl bg-primary p-8 md:p-14 text-center space-y-5">
-          <h2 className="text-3xl font-extrabold text-primary-foreground">Start Selling Today</h2>
-          <p className="text-primary-foreground/80 max-w-md mx-auto font-body">
-            Join your neighbors on Garak. List up to 20 products for free and reach buyers in your compound.
-          </p>
-          <Link to="/merchant/apply">
-            <Button size="lg" className="bg-card text-primary hover:bg-card/90 font-semibold px-10 mt-2">
-              Apply as Merchant
-            </Button>
-          </Link>
-        </div>
-      </section>
+      {!isMerchant && (
+        <section className="container mx-auto px-4 py-16">
+          <div className="rounded-2xl bg-primary p-8 md:p-14 text-center space-y-5">
+            <h2 className="text-3xl font-extrabold text-primary-foreground">Start Selling Today</h2>
+            <p className="text-primary-foreground/80 max-w-md mx-auto font-body">
+              Join your neighbors on Garak. List up to 20 products for free and reach buyers in your compound.
+            </p>
+            <Link to="/merchant/apply">
+              <Button size="lg" className="bg-card text-primary hover:bg-card/90 font-semibold px-10 mt-2">
+                Apply as Merchant
+              </Button>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <Footer />
     </div>

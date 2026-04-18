@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user, isAdmin, isMerchant: isMerchantRole, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -29,7 +31,9 @@ const Login = () => {
   }, [user, isAdmin, isMerchantRole, authLoading]);
 
   const redirectByRole = () => {
-    if (isAdmin) {
+    if (redirectTo) {
+      navigate(redirectTo, { replace: true });
+    } else if (isAdmin) {
       navigate("/admin", { replace: true });
     } else if (isMerchantRole) {
       navigate("/merchant/dashboard", { replace: true });

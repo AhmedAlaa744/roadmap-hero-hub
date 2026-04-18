@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Account from "./pages/Account";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import AdminPanel from "./pages/AdminPanel";
+import MerchantApply from "./pages/MerchantApply";
 import OrderTracking from "./pages/OrderTracking";
 import NotFound from "./pages/NotFound";
 
@@ -37,7 +38,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/account" element={<Account />} />
               <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
-              <Route path="/merchant/apply" element={<Login />} />
+              <Route path="/merchant/apply" element={<MerchantApply />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/order/:id" element={<OrderTracking />} />
               <Route path="*" element={<NotFound />} />
