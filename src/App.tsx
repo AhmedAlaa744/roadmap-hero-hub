@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Account from "./pages/Account";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import AdminPanel from "./pages/AdminPanel";
+import OrderTracking from "./pages/OrderTracking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
               <Route path="/merchant/apply" element={<Login />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/order/:id" element={<OrderTracking />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <ChatBot />
