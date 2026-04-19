@@ -29,44 +29,60 @@ const AdminPanel = () => {
 
   const fetchAll = async () => {
     const [apps, profs, ords, prods, tix] = await Promise.all([
-      supabase.from("merchant_applications").select("*, profiles(full_name, phone)").order("created_at", { ascending: false }),
+      supabase.from("merchant_applications").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false }),
-      supabase.from("orders").select("*, profiles!orders_customer_id_fkey(full_name)").order("created_at", { ascending: false }),
+      supabase.from("orders").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("*, stores(name_en)").order("created_at", { ascending: false }),
-      supabase.from("support_tickets").select("*, profiles(full_name)").order("created_at", { ascending: false }),
+      supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
     ]);
-    setApplications(apps.data || []);
+    const profileMap = new Map((profs.data || []).map((p: any) => [p.user_id, p]));
+    // Enrich applications, orders, tickets with profile info
+    const enrichedApps = (apps.data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.user_id) }));
+    const enrichedOrders = (ords.data || []).map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) }));
+    const enrichedTickets = (tix.data || []).map((t: any) => ({ ...t, profile: profileMap.get(t.user_id) }));
+    setApplications(enrichedApps);
     setUsers(profs.data || []);
-    setOrders(ords.data || []);
+    setOrders(enrichedOrders);
     setProducts(prods.data || []);
-    setTickets(tix.data || []);
+    setTickets(enrichedTickets);
     setLoading(false);
   };
 
   const approveApplication = async (app: any) => {
     try {
-      // Update application status
       await supabase.from("merchant_applications").update({ status: "approved" }).eq("id", app.id);
-      // Add moderator role
       await supabase.from("user_roles").insert({ user_id: app.user_id, role: "moderator" as any });
-      // Create store
       await supabase.from("stores").insert({
         owner_id: app.user_id,
         name_en: app.business_name_en,
         name_ar: app.business_name_ar,
         phone: app.phone,
       });
-      toast.success("Application approved! Store created.");
+      await supabase.from("notifications").insert({
+        user_id: app.user_id,
+        title: "Congratulations, you became a partner! 🎉",
+        body: `Your store "${app.business_name_en}" is now live. Sign in to your Merchant Dashboard to start adding products.`,
+      });
+      toast.success("Application approved! Store created and merchant notified.");
       fetchAll();
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const rejectApplication = async (id: string) => {
-    await supabase.from("merchant_applications").update({ status: "rejected" }).eq("id", id);
-    toast.success("Application rejected");
-    fetchAll();
+  const rejectApplication = async (app: any) => {
+    try {
+      await supabase.from("merchant_applications").update({ status: "rejected" }).eq("id", app.id);
+      await supabase.from("notifications").insert({
+        user_id: app.user_id,
+        title: "Merchant application update",
+        body: `Unfortunately, your application for "${app.business_name_en}" was not approved at this time. Please contact support for details.`,
+      });
+      toast.success("Application rejected and merchant notified");
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
@@ -131,16 +147,32 @@ const AdminPanel = () => {
           </TabsList>
 
           <TabsContent value="applications" className="mt-6 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold text-foreground">Merchant Requests</h2>
+              <span className="text-xs rounded-full bg-warning/10 text-warning px-2 py-0.5">
+                {applications.filter((a) => a.status === "pending").length} pending
+              </span>
+            </div>
             {applications.map((app) => (
               <div key={app.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-foreground">{app.business_name_en}</p>
-                    {app.business_name_ar && <p className="text-sm text-muted-foreground" dir="rtl">{app.business_name_ar}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">Phone: {app.phone} • Type: {app.business_type || "N/A"}</p>
-                    {app.description && <p className="text-xs text-muted-foreground mt-1">{app.description}</p>}
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-foreground">{app.business_name_en}</p>
+                      {app.business_name_ar && <span className="text-sm text-muted-foreground" dir="rtl">({app.business_name_ar})</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Applicant: <span className="font-medium text-foreground">{app.profile?.full_name || "—"}</span> • Account phone: {app.profile?.phone || "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Business phone: {app.phone} • Type: {app.business_type || "N/A"}
+                    </p>
+                    {app.description && <p className="text-xs text-muted-foreground mt-1 italic">"{app.description}"</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Submitted: {new Date(app.created_at).toLocaleString()}
+                    </p>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize whitespace-nowrap ${
                     app.status === "approved" ? "bg-success/10 text-success" :
                     app.status === "rejected" ? "bg-destructive/10 text-destructive" :
                     "bg-warning/10 text-warning"
@@ -149,14 +181,13 @@ const AdminPanel = () => {
                 {app.status === "pending" && (
                   <div className="flex gap-2 mt-3">
                     <Button size="sm" onClick={() => approveApplication(app)}><CheckCircle className="h-3 w-3 mr-1" /> Approve</Button>
-                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => rejectApplication(app.id)}><XCircle className="h-3 w-3 mr-1" /> Reject</Button>
+                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => rejectApplication(app)}><XCircle className="h-3 w-3 mr-1" /> Reject</Button>
                   </div>
                 )}
               </div>
             ))}
-            {applications.length === 0 && <p className="text-center text-muted-foreground py-8">No applications</p>}
+            {applications.length === 0 && <p className="text-center text-muted-foreground py-8">No merchant requests yet</p>}
           </TabsContent>
-
           <TabsContent value="users" className="mt-6">
             <div className="rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
@@ -191,7 +222,7 @@ const AdminPanel = () => {
               <div key={o.id} className="rounded-xl border border-border bg-card p-4 flex justify-between items-center">
                 <div>
                   <p className="font-semibold text-foreground">{o.order_number}</p>
-                  <p className="text-xs text-muted-foreground">{o.profiles?.full_name || "Customer"} • {new Date(o.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{o.profile?.full_name || "Customer"} • {new Date(o.created_at).toLocaleDateString()}</p>
                   <p className="text-primary font-bold text-sm">EGP {Number(o.total).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -246,7 +277,7 @@ const AdminPanel = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-semibold text-foreground">{t.subject}</p>
-                    <p className="text-xs text-muted-foreground">{t.profiles?.full_name || "User"} • {new Date(t.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{t.profile?.full_name || "User"} • {new Date(t.created_at).toLocaleDateString()}</p>
                     <p className="text-sm text-muted-foreground mt-1">{t.message}</p>
                   </div>
                   <span className={`text-xs font-medium px-2 py-1 rounded-full ${t.status === "resolved" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{t.status}</span>
