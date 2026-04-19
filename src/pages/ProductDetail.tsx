@@ -161,6 +161,8 @@ const ProductDetail = () => {
   }
 
   const isUsed = product.condition === "used";
+  const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length : 0;
+  const userReview = reviews.find((r) => r.user_id === currentUserId);
 
   return (
     <div className="min-h-screen bg-background">
