@@ -108,7 +108,7 @@ const MerchantDashboard = () => {
         imageUrl = publicUrl;
       }
 
-      const { error } = await supabase.from("products").insert({
+      const productPayload: any = {
         store_id: store.id,
         name_en: newProduct.name_en,
         name_ar: newProduct.name_ar || null,
@@ -120,11 +120,20 @@ const MerchantDashboard = () => {
         pricing_model: newProduct.pricing_model,
         brand: newProduct.brand || null,
         stock: parseInt(newProduct.stock),
-        images: imageUrl ? [imageUrl] : [],
-      });
+        is_active: true,
+      };
+      if (imageUrl) productPayload.images = [imageUrl];
+
+      let error;
+      if (replacingId) {
+        ({ error } = await supabase.from("products").update(productPayload).eq("id", replacingId));
+      } else {
+        ({ error } = await supabase.from("products").insert(productPayload));
+      }
       if (error) throw error;
-      toast.success("Product added!");
+      toast.success(replacingId ? "Product replaced!" : "Product added!");
       setShowAddProduct(false);
+      setReplacingId(null);
       setNewProduct({ name_en: "", name_ar: "", description_en: "", description_ar: "", price: "", category_id: "", condition: "new", pricing_model: "fixed", brand: "", stock: "1" });
       setImageFile(null);
       fetchData();
