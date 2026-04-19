@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import NotificationBell from "@/components/NotificationBell";
 import {
   DropdownMenu,
@@ -17,16 +18,23 @@ import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [lang, setLang] = useState<"en" | "ar">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const { user, profile, signOut, isAdmin, isMerchant } = useAuth();
   const { totalItems } = useCart();
+  const { lang, toggleLang, t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("Signed out");
+    toast.success(t("Signed out", "تم تسجيل الخروج"));
     navigate("/");
+  };
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    navigate(q ? `/browse?q=${encodeURIComponent(q)}` : "/browse");
+    setIsMenuOpen(false);
   };
 
   return (
