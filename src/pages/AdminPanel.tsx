@@ -54,6 +54,7 @@ const AdminPanel = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [slotRequests, setSlotRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -70,7 +71,7 @@ const AdminPanel = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [apps, profs, roles, ords, items, prods, strs, tix, revs, cats] = await Promise.all([
+    const [apps, profs, roles, ords, items, prods, strs, tix, revs, cats, slots] = await Promise.all([
       supabase.from("merchant_applications").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
@@ -81,8 +82,10 @@ const AdminPanel = () => {
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
       supabase.from("reviews").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("sort_order"),
+      supabase.from("slot_requests").select("*").order("created_at", { ascending: false }),
     ]);
     const profileMap = new Map((profs.data || []).map((p: any) => [p.user_id, p]));
+    const storeMap = new Map((strs.data || []).map((s: any) => [s.id, s]));
     const rolesMap = new Map<string, string[]>();
     (roles.data || []).forEach((r: any) => {
       const arr = rolesMap.get(r.user_id) || [];
@@ -99,7 +102,30 @@ const AdminPanel = () => {
     setTickets((tix.data || []).map((t: any) => ({ ...t, profile: profileMap.get(t.user_id) })));
     setReviews(revs.data || []);
     setCategories(cats.data || []);
+    setSlotRequests((slots.data || []).map((s: any) => ({
+      ...s,
+      profile: profileMap.get(s.user_id),
+      store: storeMap.get(s.store_id),
+    })));
     setLoading(false);
+  };
+
+  // ===== Slot requests =====
+  const reviewSlotRequest = async (req: any, status: "approved" | "rejected", grantedExtra: number) => {
+    const { error } = await supabase.from("slot_requests").update({
+      status,
+      granted_extra: status === "approved" ? grantedExtra : 0,
+    }).eq("id", req.id);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("notifications").insert({
+      user_id: req.user_id,
+      title: status === "approved" ? "Slot request approved 🎉" : "Slot request update",
+      body: status === "approved"
+        ? `You've been granted +${grantedExtra} extra product slots.`
+        : `Your request for +${req.requested_extra} extra slots was not approved.`,
+    });
+    toast.success(`Request ${status}`);
+    fetchAll();
   };
 
   // ===== Applications =====
@@ -359,6 +385,14 @@ const AdminPanel = () => {
             <TabsTrigger value="stores">Stores</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="slots">
+              Slot Requests
+              {slotRequests.filter((r) => r.status === "pending").length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-warning text-warning-foreground px-1.5 py-0.5 rounded-full">
+                  {slotRequests.filter((r) => r.status === "pending").length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
 
@@ -649,6 +683,14 @@ const AdminPanel = () => {
             ))}
           </TabsContent>
 
+          {/* ============ SLOT REQUESTS ============ */}
+          <TabsContent value="slots" className="mt-6 space-y-3">
+            {slotRequests.length === 0 && <p className="text-center text-muted-foreground py-8">No slot requests</p>}
+            {slotRequests.map((r) => (
+              <SlotRequestRow key={r.id} req={r} onReview={reviewSlotRequest} />
+            ))}
+          </TabsContent>
+
           {/* ============ SUPPORT ============ */}
           <TabsContent value="support" className="mt-6 space-y-3">
             {tickets.map((t) => (
@@ -679,3 +721,47 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
+interface SlotRequestRowProps {
+  req: any;
+  onReview: (req: any, status: "approved" | "rejected", grantedExtra: number) => void;
+}
+
+const SlotRequestRow = ({ req, onReview }: SlotRequestRowProps) => {
+  const [granted, setGranted] = useState<string>(String(req.granted_extra || req.requested_extra));
+  const isPending = req.status === "pending";
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground">
+            {req.store?.name_en || "Store"} — requesting +{req.requested_extra} slots
+          </p>
+          <p className="text-xs text-muted-foreground">
+            By {req.profile?.full_name || "Merchant"} • {new Date(req.created_at).toLocaleDateString()}
+          </p>
+          {req.reason && <p className="text-sm text-muted-foreground mt-1 italic">"{req.reason}"</p>}
+        </div>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize whitespace-nowrap ${
+          req.status === "approved" ? "bg-success/10 text-success" :
+          req.status === "rejected" ? "bg-destructive/10 text-destructive" :
+          "bg-warning/10 text-warning"
+        }`}>
+          {req.status}{req.status === "approved" ? ` (+${req.granted_extra})` : ""}
+        </span>
+      </div>
+      {isPending && (
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <label className="text-xs text-muted-foreground">Grant:</label>
+          <Input type="number" min="0" value={granted} onChange={(e) => setGranted(e.target.value)} className="h-8 w-20" />
+          <Button size="sm" onClick={() => onReview(req, "approved", parseInt(granted) || 0)}>
+            <CheckCircle className="h-3 w-3 mr-1" /> Approve
+          </Button>
+          <Button size="sm" variant="outline" className="text-destructive" onClick={() => onReview(req, "rejected", 0)}>
+            <XCircle className="h-3 w-3 mr-1" /> Reject
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -4,6 +4,7 @@ import { Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import NotificationBell from "@/components/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +61,8 @@ const Header = () => {
           >
             {lang === "en" ? "عربي" : "EN"}
           </button>
+
+          <NotificationBell />
 
           <Link to="/cart" className="relative">
             <Button variant="ghost" size="icon" className="text-foreground">

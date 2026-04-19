@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X, Eye, EyeOff } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X, Eye, EyeOff, RefreshCw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const MerchantDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +31,12 @@ const MerchantDashboard = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [editStock, setEditStock] = useState("");
+  const [replacingId, setReplacingId] = useState<string | null>(null);
+  const [slotLimit, setSlotLimit] = useState<number>(20);
+  const [slotRequests, setSlotRequests] = useState<any[]>([]);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestExtra, setRequestExtra] = useState("5");
+  const [requestReason, setRequestReason] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -48,19 +55,41 @@ const MerchantDashboard = () => {
     setStore(storeData);
 
     if (storeData) {
-      const [{ data: prods }, { data: ords }, { data: cats }] = await Promise.all([
+      const [{ data: prods }, { data: ords }, { data: cats }, { data: limit }, { data: reqs }] = await Promise.all([
         supabase.from("products").select("*").eq("store_id", storeData.id).order("created_at", { ascending: false }),
         supabase.from("orders").select("*, order_items(*)").eq("store_id", storeData.id).order("created_at", { ascending: false }),
         supabase.from("categories").select("*").order("sort_order"),
+        supabase.rpc("merchant_active_slot_limit", { _store_id: storeData.id }),
+        supabase.from("slot_requests").select("*").eq("store_id", storeData.id).order("created_at", { ascending: false }),
       ]);
       setProducts(prods || []);
       setOrders(ords || []);
       setCategories(cats || []);
+      setSlotLimit(typeof limit === "number" ? limit : 20);
+      setSlotRequests(reqs || []);
     } else {
       const { data: cats } = await supabase.from("categories").select("*").order("sort_order");
       setCategories(cats || []);
     }
     setLoading(false);
+  };
+
+  const submitSlotRequest = async () => {
+    if (!store || !user) return;
+    const extra = parseInt(requestExtra);
+    if (isNaN(extra) || extra <= 0) { toast.error("Enter a valid number"); return; }
+    const { error } = await supabase.from("slot_requests").insert({
+      user_id: user.id,
+      store_id: store.id,
+      requested_extra: extra,
+      reason: requestReason || null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Request sent — admin will review it");
+    setShowRequestDialog(false);
+    setRequestReason("");
+    setRequestExtra("5");
+    fetchData();
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -79,7 +108,7 @@ const MerchantDashboard = () => {
         imageUrl = publicUrl;
       }
 
-      const { error } = await supabase.from("products").insert({
+      const productPayload: any = {
         store_id: store.id,
         name_en: newProduct.name_en,
         name_ar: newProduct.name_ar || null,
@@ -91,11 +120,20 @@ const MerchantDashboard = () => {
         pricing_model: newProduct.pricing_model,
         brand: newProduct.brand || null,
         stock: parseInt(newProduct.stock),
-        images: imageUrl ? [imageUrl] : [],
-      });
+        is_active: true,
+      };
+      if (imageUrl) productPayload.images = [imageUrl];
+
+      let error;
+      if (replacingId) {
+        ({ error } = await supabase.from("products").update(productPayload).eq("id", replacingId));
+      } else {
+        ({ error } = await supabase.from("products").insert(productPayload));
+      }
       if (error) throw error;
-      toast.success("Product added!");
+      toast.success(replacingId ? "Product replaced!" : "Product added!");
       setShowAddProduct(false);
+      setReplacingId(null);
       setNewProduct({ name_en: "", name_ar: "", description_en: "", description_ar: "", price: "", category_id: "", condition: "new", pricing_model: "fixed", brand: "", stock: "1" });
       setImageFile(null);
       fetchData();
@@ -209,6 +247,9 @@ const MerchantDashboard = () => {
   }
 
   const totalRevenue = orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + Number(o.total), 0);
+  const activeCount = products.filter((p) => p.is_active).length;
+  const atSlotLimit = activeCount >= slotLimit;
+  const pendingSlotRequest = slotRequests.find((r) => r.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -221,12 +262,17 @@ const MerchantDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="rounded-xl border border-border bg-card p-4">
             <Package className="h-5 w-5 text-primary mb-2" />
-            <p className="text-2xl font-bold text-foreground">{products.length}</p>
-            <p className="text-xs text-muted-foreground">Products</p>
+            <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+            <p className="text-xs text-muted-foreground">Active Products</p>
             <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (products.length / 20) * 100)}%` }} />
+              <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (activeCount / slotLimit) * 100)}%` }} />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{products.length}/20 slots used</p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} slots</p>
+              <button onClick={() => setShowRequestDialog(true)} className="text-xs text-primary hover:underline font-medium">
+                Request more
+              </button>
+            </div>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <ShoppingCart className="h-5 w-5 text-accent mb-2" />
@@ -254,10 +300,17 @@ const MerchantDashboard = () => {
           <TabsContent value="products" className="mt-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-semibold text-foreground">My Products</h2>
-              <Button size="sm" onClick={() => setShowAddProduct(true)} disabled={products.length >= 20}>
+              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? "Slot limit reached — request more or replace a product" : ""}>
                 <Plus className="h-4 w-4 mr-1" /> Add Product
               </Button>
             </div>
+            {atSlotLimit && (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 mb-4 text-xs text-foreground">
+                You've reached your {slotLimit}-product limit. Use <strong>Replace</strong> on an existing item, or{" "}
+                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>request more slots</button>.
+                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">(A request for +{pendingSlotRequest.requested_extra} is pending review.)</span>}
+              </div>
+            )}
 
             {showAddProduct && (
               <form onSubmit={handleAddProduct} className="rounded-xl border border-border bg-card p-6 mb-6 space-y-4">
@@ -318,9 +371,16 @@ const MerchantDashboard = () => {
                     <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1 text-sm" />
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={loading}>Save Product</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowAddProduct(false)}>Cancel</Button>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {replacingId && (
+                    <p className="text-xs text-muted-foreground">
+                      🔄 Replacing existing product. Saving will overwrite it (no new slot used).
+                    </p>
+                  )}
+                  <div className="flex gap-3 ml-auto">
+                    <Button type="submit" disabled={loading}>{replacingId ? "Save Replacement" : "Save Product"}</Button>
+                    <Button type="button" variant="outline" onClick={() => { setShowAddProduct(false); setReplacingId(null); }}>Cancel</Button>
+                  </div>
                 </div>
               </form>
             )}
@@ -366,8 +426,22 @@ const MerchantDashboard = () => {
                       <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? "Pause listing" : "Activate listing"}>
                         {p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit price/stock">
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Replace product (does not consume a slot)"
+                        onClick={() => {
+                          setReplacingId(p.id);
+                          setNewProduct({ name_en: "", name_ar: "", description_en: "", description_ar: "", price: "", category_id: "", condition: "new", pricing_model: "fixed", brand: "", stock: "1" });
+                          setImageFile(null);
+                          setShowAddProduct(true);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)} className="text-destructive">
                         <Trash2 className="h-4 w-4" />
@@ -420,6 +494,50 @@ const MerchantDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle>Request more product slots</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Current limit: <strong>{slotLimit}</strong> active products. Tell the admin how many extra slots you need and why.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-foreground">Extra slots requested</label>
+              <Input type="number" min="1" value={requestExtra} onChange={(e) => setRequestExtra(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Reason (optional)</label>
+              <textarea
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                placeholder="e.g. expanding our product line for the new season..."
+              />
+            </div>
+            {slotRequests.length > 0 && (
+              <div className="rounded-lg border border-border p-2 max-h-32 overflow-y-auto text-xs space-y-1">
+                <p className="font-medium text-foreground">Recent requests</p>
+                {slotRequests.slice(0, 5).map((r) => (
+                  <div key={r.id} className="flex justify-between text-muted-foreground">
+                    <span>+{r.requested_extra} slots</span>
+                    <span className={r.status === "approved" ? "text-success" : r.status === "rejected" ? "text-destructive" : "text-warning"}>
+                      {r.status}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
+            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> Send Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );

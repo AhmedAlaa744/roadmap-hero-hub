@@ -50,11 +50,33 @@ const ProductDetail = () => {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isVerifiedBuyer, setIsVerifiedBuyer] = useState(false);
   const { addToCart } = useCart();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
+
+  useEffect(() => {
+    const check = async () => {
+      if (!currentUserId || !id) { setIsVerifiedBuyer(false); return; }
+      const { data: deliveredOrders } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("customer_id", currentUserId)
+        .eq("status", "delivered");
+      const orderIds = (deliveredOrders || []).map((o: any) => o.id);
+      if (orderIds.length === 0) { setIsVerifiedBuyer(false); return; }
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("id")
+        .eq("product_id", id)
+        .in("order_id", orderIds)
+        .limit(1);
+      setIsVerifiedBuyer((items || []).length > 0);
+    };
+    check();
+  }, [currentUserId, id]);
 
   const fetchReviews = async (productId: string) => {
     const { data: revs } = await supabase
@@ -338,38 +360,46 @@ const ProductDetail = () => {
           <h2 className="text-xl font-bold text-foreground mb-6">Reviews ({reviews.length})</h2>
 
           {currentUserId ? (
-            <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
-              <h3 className="font-semibold text-foreground">{userReview ? "Update your review" : "Write a review"}</h3>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setReviewRating(n)}
-                    className="p-0.5"
-                    aria-label={`${n} stars`}
-                  >
-                    <Star className={`h-6 w-6 ${n <= reviewRating ? "fill-warning text-warning" : "text-border"}`} />
-                  </button>
-                ))}
-              </div>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={userReview?.comment || "Share your experience..."}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
-              />
-              <div className="flex gap-2">
-                <Button onClick={submitReview} disabled={submittingReview}>
-                  {userReview ? "Update Review" : "Submit Review"}
-                </Button>
-                {userReview && (
-                  <Button variant="outline" className="text-destructive" onClick={() => deleteReview(userReview.id)}>
-                    Delete my review
+            isVerifiedBuyer || userReview ? (
+              <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+                <h3 className="font-semibold text-foreground">{userReview ? "Update your review" : "Write a review"}</h3>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setReviewRating(n)}
+                      className="p-0.5"
+                      aria-label={`${n} stars`}
+                    >
+                      <Star className={`h-6 w-6 ${n <= reviewRating ? "fill-warning text-warning" : "text-border"}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder={userReview?.comment || "Share your experience..."}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={submitReview} disabled={submittingReview}>
+                    {userReview ? "Update Review" : "Submit Review"}
                   </Button>
-                )}
+                  {userReview && (
+                    <Button variant="outline" className="text-destructive" onClick={() => deleteReview(userReview.id)}>
+                      Delete my review
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-muted/30 p-4 mb-6">
+                <p className="text-sm text-muted-foreground">
+                  ⭐ Only verified buyers can review this product. Place an order and once it's marked as <strong>delivered</strong>, you'll be able to leave a review.
+                </p>
+              </div>
+            )
           ) : (
             <p className="text-sm text-muted-foreground mb-6">
               <Link to="/login" className="text-primary hover:underline">Log in</Link> to leave a review.
