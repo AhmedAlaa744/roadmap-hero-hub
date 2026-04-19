@@ -540,6 +540,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_has_order_from_store: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
