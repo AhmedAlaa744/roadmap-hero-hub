@@ -46,21 +46,43 @@ const Login = () => {
     }
   };
 
+  const validateEmail = (value: string): string | null => {
+    const v = value.trim();
+    if (!v) return null; // optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Please enter a valid email address";
+  };
+
+  const handleEmailBlur = () => {
+    setEmailError(validateEmail(email));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isRegister && !agreed) {
       toast.error("Please agree to the terms and conditions");
       return;
     }
-    if (isRegister && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast.error("Please enter a valid email address");
-      return;
+    if (isRegister) {
+      const err = validateEmail(email);
+      if (err) {
+        setEmailError(err);
+        toast.error(err);
+        return;
+      }
     }
     setLoading(true);
     try {
       if (isRegister) {
         const { error } = await signUp(phone, password, fullName, email.trim() || undefined);
-        if (error) throw error;
+        if (error) {
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("profiles_email_unique") || msg.includes("duplicate key") || msg.includes("already") && msg.includes("email")) {
+            const friendly = "This email is already in use";
+            setEmailError(friendly);
+            throw new Error(friendly);
+          }
+          throw error;
+        }
 
         if (isMerchant && businessNameEn) {
           // Submit merchant application after a short delay for profile creation
