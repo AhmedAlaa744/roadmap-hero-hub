@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { suggestCategoryName } from "@/lib/categorize";
 
 const MerchantDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -317,11 +318,41 @@ const MerchantDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-foreground">Name (EN) *</label>
-                    <Input value={newProduct.name_en} onChange={(e) => setNewProduct({ ...newProduct, name_en: e.target.value })} required className="mt-1" />
+                    <Input
+                      value={newProduct.name_en}
+                      onChange={(e) => setNewProduct({ ...newProduct, name_en: e.target.value })}
+                      onBlur={(e) => {
+                        if (newProduct.category_id) return;
+                        const suggestion = suggestCategoryName(`${e.target.value} ${newProduct.name_ar}`);
+                        if (!suggestion) return;
+                        const match = categories.find((c) => c.name_en === suggestion);
+                        if (match) {
+                          setNewProduct((prev) => prev.category_id ? prev : { ...prev, category_id: match.id });
+                          toast.success(`Category auto-selected: ${suggestion}`);
+                        }
+                      }}
+                      required
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Name (AR)</label>
-                    <Input value={newProduct.name_ar} onChange={(e) => setNewProduct({ ...newProduct, name_ar: e.target.value })} dir="rtl" className="mt-1" />
+                    <Input
+                      value={newProduct.name_ar}
+                      onChange={(e) => setNewProduct({ ...newProduct, name_ar: e.target.value })}
+                      onBlur={(e) => {
+                        if (newProduct.category_id) return;
+                        const suggestion = suggestCategoryName(`${newProduct.name_en} ${e.target.value}`);
+                        if (!suggestion) return;
+                        const match = categories.find((c) => c.name_en === suggestion);
+                        if (match) {
+                          setNewProduct((prev) => prev.category_id ? prev : { ...prev, category_id: match.id });
+                          toast.success(`Category auto-selected: ${suggestion}`);
+                        }
+                      }}
+                      dir="rtl"
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Description (EN)</label>
