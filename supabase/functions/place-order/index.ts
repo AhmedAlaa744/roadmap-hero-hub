@@ -168,6 +168,20 @@ Deno.serve(async (req) => {
       const { error: itemsErr } = await admin.from("order_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      // Decrement stock for each ordered product (best-effort post-write).
+      // The pre-check above + this update keeps stock honest for a community marketplace.
+      for (const it of group.items) {
+        const p = productMap.get(it.product_id)!;
+        const remaining = Math.max(0, Number(p.stock) - it.quantity);
+        const { error: stockErr } = await admin
+          .from("products")
+          .update({ stock: remaining })
+          .eq("id", it.product_id);
+        if (stockErr) console.error("stock decrement failed for", it.product_id, stockErr);
+        // Update in-memory map so concurrent items in the same order don't oversell
+        productMap.set(it.product_id, { ...p, stock: remaining });
+      }
+
       createdOrderNumbers.push(orderNum);
     }
 
