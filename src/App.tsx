@@ -9,6 +9,7 @@ import ChatBot from "@/components/ChatBot";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import ProductDetail from "./pages/ProductDetail";
+import StorePage from "./pages/StorePage";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Login from "./pages/Login";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/browse" element={<Browse />} />
               <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/store/:id" element={<StorePage />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/login" element={<Login />} />

@@ -39,13 +39,40 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { addToCart } = useCart();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  const fetchReviews = async (productId: string) => {
+    const { data: revs } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
+    const userIds = [...new Set((revs || []).map((r: any) => r.user_id))];
+    let profMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles_public")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      profMap = new Map((profs || []).map((p: any) => [p.user_id, p.full_name || "Customer"]));
+    }
+    setReviews((revs || []).map((r: any) => ({ ...r, reviewer: profMap.get(r.user_id) || "Customer" })));
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -79,11 +106,36 @@ const ProductDetail = () => {
           .in("id", relatedStoreIds);
         const storeMap = new Map((relStores || []).map((s: any) => [s.id, s.name_en]));
         setRelatedProducts((related || []).map((r: any) => toProduct({ ...r, stores: { name_en: storeMap.get(r.store_id) } })));
+        await fetchReviews(id!);
       }
       setLoading(false);
     };
     if (id) fetchProduct();
   }, [id]);
+
+  const submitReview = async () => {
+    if (!currentUserId) {
+      toast.error("Please log in to leave a review");
+      return;
+    }
+    setSubmittingReview(true);
+    const existing = reviews.find((r) => r.user_id === currentUserId);
+    const { error } = existing
+      ? await supabase.from("reviews").update({ rating: reviewRating, comment: reviewComment || null }).eq("id", existing.id)
+      : await supabase.from("reviews").insert({ product_id: id!, user_id: currentUserId, rating: reviewRating, comment: reviewComment || null });
+    setSubmittingReview(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(existing ? "Review updated" : "Review submitted");
+    setReviewComment("");
+    fetchReviews(id!);
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Review deleted");
+    fetchReviews(id!);
+  };
 
   if (loading) {
     return (
@@ -109,6 +161,8 @@ const ProductDetail = () => {
   }
 
   const isUsed = product.condition === "used";
+  const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length : 0;
+  const userReview = reviews.find((r) => r.user_id === currentUserId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,11 +195,11 @@ const ProductDetail = () => {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? "fill-warning text-warning" : "text-border"}`} />
+                  <Star key={i} className={`h-4 w-4 ${i < Math.round(avgRating) ? "fill-warning text-warning" : "text-border"}`} />
                 ))}
               </div>
-              <span className="text-sm font-medium text-foreground">{product.rating}</span>
-              <span className="text-sm text-muted-foreground">({product.reviews_count} reviews)</span>
+              <span className="text-sm font-medium text-foreground">{avgRating > 0 ? avgRating.toFixed(1) : "—"}</span>
+              <span className="text-sm text-muted-foreground">({reviews.length} reviews)</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -278,6 +332,71 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <section className="mt-16">
+          <h2 className="text-xl font-bold text-foreground mb-6">Reviews ({reviews.length})</h2>
+
+          {currentUserId ? (
+            <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+              <h3 className="font-semibold text-foreground">{userReview ? "Update your review" : "Write a review"}</h3>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setReviewRating(n)}
+                    className="p-0.5"
+                    aria-label={`${n} stars`}
+                  >
+                    <Star className={`h-6 w-6 ${n <= reviewRating ? "fill-warning text-warning" : "text-border"}`} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder={userReview?.comment || "Share your experience..."}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+              />
+              <div className="flex gap-2">
+                <Button onClick={submitReview} disabled={submittingReview}>
+                  {userReview ? "Update Review" : "Submit Review"}
+                </Button>
+                {userReview && (
+                  <Button variant="outline" className="text-destructive" onClick={() => deleteReview(userReview.id)}>
+                    Delete my review
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mb-6">
+              <Link to="/login" className="text-primary hover:underline">Log in</Link> to leave a review.
+            </p>
+          )}
+
+          {reviews.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No reviews yet — be the first!</p>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((r) => (
+                <div key={r.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-foreground">{r.reviewer}</p>
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-3.5 w-3.5 ${i < r.rating ? "fill-warning text-warning" : "text-border"}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                  {r.comment && <p className="text-sm text-foreground mt-1">{r.comment}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {relatedProducts.length > 0 && (
           <section className="mt-16">
