@@ -156,13 +156,20 @@ const Login = () => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null); }}
+                onBlur={handleEmailBlur}
                 placeholder="you@example.com"
-                className="mt-1"
+                className={`mt-1 ${emailError ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 dir="ltr"
                 autoComplete="email"
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? "email-error" : undefined}
               />
-              <p className="text-xs text-muted-foreground mt-1">We'll use it to send order updates if you provide it.</p>
+              {emailError ? (
+                <p id="email-error" className="text-xs text-destructive mt-1">{emailError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">We'll use it to send order updates if you provide it.</p>
+              )}
             </div>
           )}
 
