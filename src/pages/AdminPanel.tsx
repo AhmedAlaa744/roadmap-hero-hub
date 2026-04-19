@@ -721,3 +721,47 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
+interface SlotRequestRowProps {
+  req: any;
+  onReview: (req: any, status: "approved" | "rejected", grantedExtra: number) => void;
+}
+
+const SlotRequestRow = ({ req, onReview }: SlotRequestRowProps) => {
+  const [granted, setGranted] = useState<string>(String(req.granted_extra || req.requested_extra));
+  const isPending = req.status === "pending";
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground">
+            {req.store?.name_en || "Store"} — requesting +{req.requested_extra} slots
+          </p>
+          <p className="text-xs text-muted-foreground">
+            By {req.profile?.full_name || "Merchant"} • {new Date(req.created_at).toLocaleDateString()}
+          </p>
+          {req.reason && <p className="text-sm text-muted-foreground mt-1 italic">"{req.reason}"</p>}
+        </div>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize whitespace-nowrap ${
+          req.status === "approved" ? "bg-success/10 text-success" :
+          req.status === "rejected" ? "bg-destructive/10 text-destructive" :
+          "bg-warning/10 text-warning"
+        }`}>
+          {req.status}{req.status === "approved" ? ` (+${req.granted_extra})` : ""}
+        </span>
+      </div>
+      {isPending && (
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <label className="text-xs text-muted-foreground">Grant:</label>
+          <Input type="number" min="0" value={granted} onChange={(e) => setGranted(e.target.value)} className="h-8 w-20" />
+          <Button size="sm" onClick={() => onReview(req, "approved", parseInt(granted) || 0)}>
+            <CheckCircle className="h-3 w-3 mr-1" /> Approve
+          </Button>
+          <Button size="sm" variant="outline" className="text-destructive" onClick={() => onReview(req, "rejected", 0)}>
+            <XCircle className="h-3 w-3 mr-1" /> Reject
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
