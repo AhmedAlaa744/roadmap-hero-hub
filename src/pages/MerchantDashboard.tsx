@@ -259,12 +259,17 @@ const MerchantDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="rounded-xl border border-border bg-card p-4">
             <Package className="h-5 w-5 text-primary mb-2" />
-            <p className="text-2xl font-bold text-foreground">{products.length}</p>
-            <p className="text-xs text-muted-foreground">Products</p>
+            <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+            <p className="text-xs text-muted-foreground">Active Products</p>
             <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (products.length / 20) * 100)}%` }} />
+              <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (activeCount / slotLimit) * 100)}%` }} />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{products.length}/20 slots used</p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} slots</p>
+              <button onClick={() => setShowRequestDialog(true)} className="text-xs text-primary hover:underline font-medium">
+                Request more
+              </button>
+            </div>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <ShoppingCart className="h-5 w-5 text-accent mb-2" />
