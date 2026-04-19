@@ -54,6 +54,7 @@ const AdminPanel = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [slotRequests, setSlotRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -70,7 +71,7 @@ const AdminPanel = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [apps, profs, roles, ords, items, prods, strs, tix, revs, cats] = await Promise.all([
+    const [apps, profs, roles, ords, items, prods, strs, tix, revs, cats, slots] = await Promise.all([
       supabase.from("merchant_applications").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("*"),
@@ -81,8 +82,10 @@ const AdminPanel = () => {
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
       supabase.from("reviews").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("sort_order"),
+      supabase.from("slot_requests").select("*").order("created_at", { ascending: false }),
     ]);
     const profileMap = new Map((profs.data || []).map((p: any) => [p.user_id, p]));
+    const storeMap = new Map((strs.data || []).map((s: any) => [s.id, s]));
     const rolesMap = new Map<string, string[]>();
     (roles.data || []).forEach((r: any) => {
       const arr = rolesMap.get(r.user_id) || [];
@@ -99,7 +102,30 @@ const AdminPanel = () => {
     setTickets((tix.data || []).map((t: any) => ({ ...t, profile: profileMap.get(t.user_id) })));
     setReviews(revs.data || []);
     setCategories(cats.data || []);
+    setSlotRequests((slots.data || []).map((s: any) => ({
+      ...s,
+      profile: profileMap.get(s.user_id),
+      store: storeMap.get(s.store_id),
+    })));
     setLoading(false);
+  };
+
+  // ===== Slot requests =====
+  const reviewSlotRequest = async (req: any, status: "approved" | "rejected", grantedExtra: number) => {
+    const { error } = await supabase.from("slot_requests").update({
+      status,
+      granted_extra: status === "approved" ? grantedExtra : 0,
+    }).eq("id", req.id);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("notifications").insert({
+      user_id: req.user_id,
+      title: status === "approved" ? "Slot request approved 🎉" : "Slot request update",
+      body: status === "approved"
+        ? `You've been granted +${grantedExtra} extra product slots.`
+        : `Your request for +${req.requested_extra} extra slots was not approved.`,
+    });
+    toast.success(`Request ${status}`);
+    fetchAll();
   };
 
   // ===== Applications =====
