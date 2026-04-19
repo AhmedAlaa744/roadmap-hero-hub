@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +12,8 @@ const Login = () => {
   const [isMerchant, setIsMerchant] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [businessNameEn, setBusinessNameEn] = useState("");
   const [businessNameAr, setBusinessNameAr] = useState("");
@@ -48,10 +51,14 @@ const Login = () => {
       toast.error("Please agree to the terms and conditions");
       return;
     }
+    if (isRegister && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setLoading(true);
     try {
       if (isRegister) {
-        const { error } = await signUp(phone, password, fullName);
+        const { error } = await signUp(phone, password, fullName, email.trim() || undefined);
         if (error) throw error;
 
         if (isMerchant && businessNameEn) {
