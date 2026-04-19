@@ -100,13 +100,13 @@ const Index = () => {
               )}
               {isMerchant ? (
                 <Link to="/merchant/dashboard">
-                  <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
+                  <Button size="lg" variant="outline" className="border-card/30 hover:bg-card/10 font-semibold px-8 text-primary hover:text-primary">
                     My Dashboard
                   </Button>
                 </Link>
               ) : (
                 <Link to="/merchant/apply">
-                  <Button size="lg" variant="outline" className="border-card/30 text-card hover:bg-card/10 font-semibold px-8">
+                  <Button size="lg" variant="outline" className="border-card/30 hover:bg-card/10 font-semibold px-8 text-primary hover:text-primary">
                     Become a Seller
                   </Button>
                 </Link>
