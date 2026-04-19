@@ -1,62 +1,49 @@
 
 
-## Goal
-Enforce per-product stock cap (set by merchant) end-to-end so customers can never order more than the available quantity.
-
-## Current state
-- **Merchant** already sets `stock` in the dashboard (existing field).
-- **Server** (`place-order` edge function) already blocks orders with `p.stock < it.quantity` ✅ — security is fine.
-- **Client UI** does NOT enforce the cap, and stock is **not decremented** after a successful order, so the cap silently grows stale.
-
 ## Plan
 
-### 1. Carry `stock` through to the client
-- Add `stock: number` to the `Product` interface in `src/data/mockData.ts`.
-- Set `stock: p.stock` in every `toProduct(...)` mapper:
-  - `src/pages/ProductDetail.tsx`
-  - `src/pages/Browse.tsx`
-  - `src/pages/Index.tsx`
-  - any other place a product is built (search/grep for `toProduct` / `in_stock:`).
+### 1. Hide owner name + fix WhatsApp link in ChatBot
+**File:** `src/components/ChatBot.tsx`
 
-### 2. ProductDetail page — cap quantity selector
-- `+` button disabled when `quantity >= product.stock`.
-- `−` button disabled at `1`.
-- Show `Only X left` label next to the selector when `stock <= 5`.
-- If `stock === 0`: hide quantity selector + Add to Cart, show "Out of Stock" badge instead.
-- When clicking Add to Cart, clamp `quantity` to `min(quantity, stock)` and show toast if clamped.
+- Remove all references to "Ahmed" / "احمد" / "أحمد" — both in keyword matching and in response text.
+- Replace the `OWNER_NAME` constant usage with a neutral label: **"Customer Service"** (EN) / **"خدمة العملاء"** (AR).
+- Keep the number `01116895960` and WhatsApp link.
+- **Fix the WhatsApp link**: `wa.me` requires the country code with no `+` and no leading `0`. Egypt = `20`, so the local number `01116895960` becomes `201116895960`. Current value `https://wa.me/201116895960` is already correctly formatted, but the issue is likely:
+  - the link may be opened from a context that strips it, OR
+  - `wa.me` redirects to `api.whatsapp.com` which requires a non-empty `text` param to open the chat reliably on desktop.
+  - **Fix**: switch to `https://api.whatsapp.com/send?phone=201116895960&text=...` with a default greeting (`"Hi, I need help with Garak"` / `"أهلاً، محتاج مساعدة في تطبيق جارك"`). This is the recommended format and works on both mobile and desktop.
+- Update the response copy so it reads naturally without the owner's name, e.g.:  
+  EN: *"Need more help? Contact our customer service at 01116895960 — Chat with us on WhatsApp"*  
+  AR: *"محتاج مساعدة إضافية؟ تواصل مع خدمة العملاء على 01116895960 — كلّمنا على واتساب"*
+- Remove the keyword triggers `owner / ahmed / أحمد / احمد`; keep `whatsapp / واتس / contact / تواصل`.
+- Quick action label changes from "Contact owner on WhatsApp" → **"Contact customer service on WhatsApp"** / **"تواصل مع خدمة العملاء على واتساب"**.
 
-### 3. Cart page — cap quantity buttons
-- `updateQuantity` `+` disabled when `item.quantity >= item.product.stock`.
-- Show small `Max: X` hint under the qty stepper.
-- On checkout click, re-validate each line against `product.stock`; if any exceeds, block navigation and toast.
+### 2. Add Terms / Privacy / Help pages
+**New routes**, all linked from `Footer.tsx`:
 
-### 4. CartContext — defensive cap in `addToCart`
-- When adding a product, if `existing.quantity + qty > product.stock`, cap to `product.stock` and surface a flag the caller can toast on. Simplest: clamp silently and let the page show toast.
+- `/terms` → `src/pages/Terms.tsx` — full content from the uploaded `Marketplace_Terms_and_Conditions.docx`, with all `[Your Marketplace Name]` placeholders replaced by **"Garak — Dar Misr Al-Andalus"** and `[Your Phone Number]` replaced by **01116895960**. Render as a clean, scrollable typography page (Tailwind `prose` with `max-w-3xl`, headings, lists, callouts).
+- `/privacy` → `src/pages/Privacy.tsx` — short, project-specific privacy policy covering: what data we collect (phone, optional email, address, orders), how we use it, that it's stored on Lovable Cloud / Supabase, no third-party sale, contact for data requests via 01116895960.
+- `/help` → `src/pages/Help.tsx` — Help Center with FAQ accordion sections: How to order, Delivery zone (Dar Misr Al-Andalus only, COD), Become a merchant, Manage products (edit / pause / activate / delete), Stock & availability, Account & login, Contact customer service (number + WhatsApp button using same `api.whatsapp.com` URL).
 
-### 5. Auto-decrement stock after order (server)
-In `supabase/functions/place-order/index.ts`, after `order_items` insert succeeds for a store group, decrement each product's stock:
-```ts
-for (const it of group.items) {
-  const p = productMap.get(it.product_id)!;
-  await admin.from("products")
-    .update({ stock: p.stock - it.quantity })
-    .eq("id", it.product_id);
-}
-```
-- Refresh `productMap` per loop so concurrent items in the same order don't double-spend (recompute remaining from in-memory map).
-- If stock would drop to 0, that's fine — RLS `is_active` toggle is a separate concern; stock=0 just blocks future orders via existing check.
+### 3. Footer wiring
+**File:** `src/components/Footer.tsx`
 
-### 6. Refresh stale carts
-- On Cart page mount, fetch latest `stock` for each `item.product.id` and clamp quantities; toast "Some items were adjusted to match available stock" if any line was capped.
+- Replace the three `<a href="#">` placeholders with `<Link>` to `/help`, `/terms`, `/privacy`.
 
-## Files to touch
-- `src/data/mockData.ts` — add `stock` to interface
-- `src/pages/ProductDetail.tsx` — cap quantity controls + UI
-- `src/pages/Cart.tsx` — cap qty + on-mount stock refresh + checkout guard
-- `src/pages/Browse.tsx`, `src/pages/Index.tsx` — set `stock` in mapper
-- `src/contexts/CartContext.tsx` — clamp `addToCart`
-- `supabase/functions/place-order/index.ts` — decrement stock after successful insert
+### 4. Routing
+**File:** `src/App.tsx`
 
-## Out of scope
-- Reservations / hold timers (true atomic stock locking) — overkill for a community marketplace. The combination of server-side check + immediate decrement gives strong enough protection.
+- Register the three new routes.
+
+### Files to touch
+- `src/components/ChatBot.tsx` — drop owner name, switch to `api.whatsapp.com/send?phone=...&text=...`, update copy + quick action
+- `src/components/Footer.tsx` — wire support links
+- `src/App.tsx` — add 3 routes
+- `src/pages/Terms.tsx` — new (T&C content from uploaded doc)
+- `src/pages/Privacy.tsx` — new
+- `src/pages/Help.tsx` — new
+
+### Out of scope
+- Email-based support, contact form, ticketing changes — existing `support_tickets` flow remains.
+- Auth / DB schema — no changes.
 
