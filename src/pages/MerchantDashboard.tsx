@@ -247,6 +247,9 @@ const MerchantDashboard = () => {
   }
 
   const totalRevenue = orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + Number(o.total), 0);
+  const activeCount = products.filter((p) => p.is_active).length;
+  const atSlotLimit = activeCount >= slotLimit;
+  const pendingSlotRequest = slotRequests.find((r) => r.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -297,10 +300,17 @@ const MerchantDashboard = () => {
           <TabsContent value="products" className="mt-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-semibold text-foreground">My Products</h2>
-              <Button size="sm" onClick={() => setShowAddProduct(true)} disabled={products.length >= 20}>
+              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? "Slot limit reached — request more or replace a product" : ""}>
                 <Plus className="h-4 w-4 mr-1" /> Add Product
               </Button>
             </div>
+            {atSlotLimit && (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 mb-4 text-xs text-foreground">
+                You've reached your {slotLimit}-product limit. Use <strong>Replace</strong> on an existing item, or{" "}
+                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>request more slots</button>.
+                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">(A request for +{pendingSlotRequest.requested_extra} is pending review.)</span>}
+              </div>
+            )}
 
             {showAddProduct && (
               <form onSubmit={handleAddProduct} className="rounded-xl border border-border bg-card p-6 mb-6 space-y-4">
