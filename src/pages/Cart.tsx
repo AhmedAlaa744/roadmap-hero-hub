@@ -1,12 +1,61 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Trash2, ArrowRight, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, subtotal, totalItems } = useCart();
+  const navigate = useNavigate();
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+
+  // Refresh stock on mount + clamp quantities to latest stock
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const ids = items.map((i) => i.product.id);
+      const { data } = await supabase
+        .from("products")
+        .select("id, stock, is_active")
+        .in("id", ids);
+      if (cancelled || !data) return;
+      const map: Record<string, number> = {};
+      let adjusted = false;
+      for (const row of data) {
+        const stock = row.is_active ? Number(row.stock ?? 0) : 0;
+        map[row.id] = stock;
+        const cartItem = items.find((i) => i.product.id === row.id);
+        if (cartItem && cartItem.quantity > stock) {
+          adjusted = true;
+          if (stock <= 0) removeFromCart(row.id);
+          else updateQuantity(row.id, stock);
+        }
+      }
+      setStockMap(map);
+      if (adjusted) toast.info("Some items were adjusted to match available stock.");
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stockFor = (id: string, fallback: number) =>
+    stockMap[id] ?? fallback ?? 0;
+
+  const handleCheckout = () => {
+    for (const item of items) {
+      const cap = stockFor(item.product.id, item.product.stock ?? 0);
+      if (item.quantity > cap) {
+        toast.error(`"${item.product.name_en}" exceeds available stock (${cap}).`);
+        return;
+      }
+    }
+    navigate("/checkout");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,30 +76,53 @@ const Cart = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              {items.map((item) => (
-                <div key={item.product.id} className="flex gap-4 rounded-xl border border-border bg-card p-4">
-                  <Link to={`/product/${item.product.id}`} className="shrink-0">
-                    <img src={item.product.images[0]} alt={item.product.name_en} loading="lazy" className="h-24 w-24 rounded-lg object-cover" />
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <Link to={`/product/${item.product.id}`} className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
-                      {item.product.name_en}
+              {items.map((item) => {
+                const cap = stockFor(item.product.id, item.product.stock ?? 0);
+                const atMax = item.quantity >= cap;
+                return (
+                  <div key={item.product.id} className="flex gap-4 rounded-xl border border-border bg-card p-4">
+                    <Link to={`/product/${item.product.id}`} className="shrink-0">
+                      <img src={item.product.images[0]} alt={item.product.name_en} loading="lazy" className="h-24 w-24 rounded-lg object-cover" />
                     </Link>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.product.store_name}</p>
-                    <p className="text-lg font-bold text-primary mt-2">EGP {item.product.price.toLocaleString()}</p>
-                  </div>
-                  <div className="flex flex-col items-end justify-between">
-                    <button onClick={() => removeFromCart(item.product.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                    <div className="flex items-center border border-border rounded-lg overflow-hidden">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="px-2.5 py-1 text-sm text-foreground hover:bg-muted">−</button>
-                      <span className="px-3 py-1 text-sm font-semibold text-foreground">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="px-2.5 py-1 text-sm text-foreground hover:bg-muted">+</button>
+                    <div className="flex-1 min-w-0">
+                      <Link to={`/product/${item.product.id}`} className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
+                        {item.product.name_en}
+                      </Link>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.product.store_name}</p>
+                      <p className="text-lg font-bold text-primary mt-2">EGP {item.product.price.toLocaleString()}</p>
+                    </div>
+                    <div className="flex flex-col items-end justify-between">
+                      <button onClick={() => removeFromCart(item.product.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                            className="px-2.5 py-1 text-sm text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                          >−</button>
+                          <span className="px-3 py-1 text-sm font-semibold text-foreground">{item.quantity}</span>
+                          <button
+                            onClick={() => {
+                              if (item.quantity + 1 > cap) {
+                                toast.warning(`Only ${cap} available.`);
+                                return;
+                              }
+                              updateQuantity(item.product.id, item.quantity + 1);
+                            }}
+                            disabled={atMax}
+                            className="px-2.5 py-1 text-sm text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                          >+</button>
+                        </div>
+                        {cap > 0 && (
+                          <span className="text-[11px] text-muted-foreground">Max: {cap}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="lg:col-span-1">
@@ -70,12 +142,10 @@ const Cart = () => {
                   <span>Total</span>
                   <span className="text-primary text-xl">EGP {subtotal.toLocaleString()}</span>
                 </div>
-                <Link to="/checkout">
-                  <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" size="lg">
-                    Proceed to Checkout
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <Button onClick={handleCheckout} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" size="lg">
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
                 <p className="text-xs text-center text-muted-foreground">Cash on Delivery available</p>
               </div>
             </div>

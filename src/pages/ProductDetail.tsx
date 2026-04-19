@@ -32,6 +32,7 @@ const toProduct = (p: any) => ({
   rating: 4.5,
   reviews_count: 0,
   in_stock: p.stock > 0,
+  stock: Number(p.stock ?? 0),
 });
 
 const ProductDetail = () => {
@@ -177,16 +178,43 @@ const ProductDetail = () => {
                   <MessageCircle className="h-4 w-4 mr-2" /> Offer Price
                 </Button>
               ) : product.pricing_model === "fixed" ? (
-                <>
-                  <div className="flex items-center border border-border rounded-lg overflow-hidden">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-3 py-2 text-foreground hover:bg-muted">−</button>
-                    <span className="px-4 py-2 text-sm font-semibold text-foreground">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="px-3 py-2 text-foreground hover:bg-muted">+</button>
-                  </div>
-                  <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" onClick={() => { addToCart(product, quantity); toast.success("Added to cart!"); }}>
-                    <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
-                  </Button>
-                </>
+                product.stock === 0 ? (
+                  <span className="flex-1 inline-flex items-center justify-center rounded-md border border-destructive/30 bg-destructive/10 text-destructive font-semibold py-2">
+                    Out of Stock
+                  </span>
+                ) : (
+                  <>
+                    <div className="flex flex-col items-start gap-1">
+                      <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          disabled={quantity <= 1}
+                          className="px-3 py-2 text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                        >−</button>
+                        <span className="px-4 py-2 text-sm font-semibold text-foreground">{quantity}</span>
+                        <button
+                          onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                          disabled={quantity >= product.stock}
+                          className="px-3 py-2 text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                        >+</button>
+                      </div>
+                      {product.stock <= 5 && (
+                        <span className="text-xs font-medium text-warning">Only {product.stock} left</span>
+                      )}
+                    </div>
+                    <Button
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                      onClick={() => {
+                        const qty = Math.min(quantity, product.stock);
+                        if (qty < quantity) toast.warning(`Only ${product.stock} available — quantity adjusted.`);
+                        addToCart(product, qty);
+                        toast.success("Added to cart!");
+                      }}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+                    </Button>
+                  </>
+                )
               ) : product.pricing_model === "negotiable" ? (
                 <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" onClick={() => setShowOfferForm(true)}>
                   <MessageCircle className="h-4 w-4 mr-2" /> Make an Offer
