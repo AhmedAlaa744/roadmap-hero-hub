@@ -683,6 +683,14 @@ const AdminPanel = () => {
             ))}
           </TabsContent>
 
+          {/* ============ SLOT REQUESTS ============ */}
+          <TabsContent value="slots" className="mt-6 space-y-3">
+            {slotRequests.length === 0 && <p className="text-center text-muted-foreground py-8">No slot requests</p>}
+            {slotRequests.map((r) => (
+              <SlotRequestRow key={r.id} req={r} onReview={reviewSlotRequest} />
+            ))}
+          </TabsContent>
+
           {/* ============ SUPPORT ============ */}
           <TabsContent value="support" className="mt-6 space-y-3">
             {tickets.map((t) => (
