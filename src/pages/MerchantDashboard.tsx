@@ -345,9 +345,13 @@ const MerchantDashboard = () => {
                       </p>
                     )}
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${p.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                    {p.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <button
+                    onClick={() => toggleActive(p.id, p.is_active)}
+                    className={`text-xs px-2 py-1 rounded-full transition-colors cursor-pointer ${p.is_active ? "bg-success/10 text-success hover:bg-success/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                    title={p.is_active ? "Click to pause" : "Click to activate"}
+                  >
+                    {p.is_active ? "Active" : "Paused"}
+                  </button>
                   {editingId === p.id ? (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => saveEdit(p.id)} className="text-success">
@@ -359,6 +363,9 @@ const MerchantDashboard = () => {
                     </>
                   ) : (
                     <>
+                      <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? "Pause listing" : "Activate listing"}>
+                        {p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
