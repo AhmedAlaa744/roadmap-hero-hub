@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,9 @@ const MerchantDashboard = () => {
     brand: "", stock: "1",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editStock, setEditStock] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -104,9 +107,59 @@ const MerchantDashboard = () => {
   };
 
   const deleteProduct = async (id: string) => {
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Product deleted"); fetchData(); }
+    if (!confirm("Delete this product? This cannot be undone.")) return;
+    const { error, count } = await supabase
+      .from("products")
+      .delete({ count: "exact" })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (!count) {
+      toast.error("Could not delete — you may not have permission.");
+      return;
+    }
+    toast.success("Product deleted");
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const startEdit = (p: any) => {
+    setEditingId(p.id);
+    setEditPrice(String(p.price));
+    setEditStock(String(p.stock));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditPrice("");
+    setEditStock("");
+  };
+
+  const saveEdit = async (id: string) => {
+    const priceNum = parseFloat(editPrice);
+    const stockNum = parseInt(editStock);
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error("Invalid price");
+      return;
+    }
+    if (isNaN(stockNum) || stockNum < 0) {
+      toast.error("Invalid stock");
+      return;
+    }
+    const { error } = await supabase
+      .from("products")
+      .update({ price: priceNum, stock: stockNum })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Product updated");
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, price: priceNum, stock: stockNum } : p))
+    );
+    cancelEdit();
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
@@ -253,14 +306,42 @@ const MerchantDashboard = () => {
                   {p.images?.[0] && <img src={p.images[0]} alt={p.name_en} className="h-14 w-14 rounded-lg object-cover" />}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground truncate">{p.name_en}</p>
-                    <p className="text-sm text-primary font-bold">EGP {Number(p.price).toLocaleString()}</p>
+                    {editingId === p.id ? (
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <label className="text-xs text-muted-foreground">Price</label>
+                        <Input type="number" min="0" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-24" />
+                        <label className="text-xs text-muted-foreground">Stock</label>
+                        <Input type="number" min="0" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="h-8 w-20" />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-primary font-bold">
+                        EGP {Number(p.price).toLocaleString()}
+                        <span className="text-xs text-muted-foreground font-normal ml-2">Stock: {p.stock}</span>
+                      </p>
+                    )}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${p.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                     {p.is_active ? "Active" : "Inactive"}
                   </span>
-                  <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)} className="text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {editingId === p.id ? (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => saveEdit(p.id)} className="text-success">
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={cancelEdit}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)} className="text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))}
               {products.length === 0 && <p className="text-center text-muted-foreground py-8">No products yet. Add your first product!</p>}
