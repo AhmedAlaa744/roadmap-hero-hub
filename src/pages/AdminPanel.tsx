@@ -50,28 +50,39 @@ const AdminPanel = () => {
 
   const approveApplication = async (app: any) => {
     try {
-      // Update application status
       await supabase.from("merchant_applications").update({ status: "approved" }).eq("id", app.id);
-      // Add moderator role
       await supabase.from("user_roles").insert({ user_id: app.user_id, role: "moderator" as any });
-      // Create store
       await supabase.from("stores").insert({
         owner_id: app.user_id,
         name_en: app.business_name_en,
         name_ar: app.business_name_ar,
         phone: app.phone,
       });
-      toast.success("Application approved! Store created.");
+      await supabase.from("notifications").insert({
+        user_id: app.user_id,
+        title: "Congratulations, you became a partner! 🎉",
+        body: `Your store "${app.business_name_en}" is now live. Sign in to your Merchant Dashboard to start adding products.`,
+      });
+      toast.success("Application approved! Store created and merchant notified.");
       fetchAll();
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const rejectApplication = async (id: string) => {
-    await supabase.from("merchant_applications").update({ status: "rejected" }).eq("id", id);
-    toast.success("Application rejected");
-    fetchAll();
+  const rejectApplication = async (app: any) => {
+    try {
+      await supabase.from("merchant_applications").update({ status: "rejected" }).eq("id", app.id);
+      await supabase.from("notifications").insert({
+        user_id: app.user_id,
+        title: "Merchant application update",
+        body: `Unfortunately, your application for "${app.business_name_en}" was not approved at this time. Please contact support for details.`,
+      });
+      toast.success("Application rejected and merchant notified");
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
