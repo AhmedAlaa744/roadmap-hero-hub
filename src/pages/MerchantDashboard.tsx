@@ -494,6 +494,50 @@ const MerchantDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle>Request more product slots</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Current limit: <strong>{slotLimit}</strong> active products. Tell the admin how many extra slots you need and why.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-foreground">Extra slots requested</label>
+              <Input type="number" min="1" value={requestExtra} onChange={(e) => setRequestExtra(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Reason (optional)</label>
+              <textarea
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                placeholder="e.g. expanding our product line for the new season..."
+              />
+            </div>
+            {slotRequests.length > 0 && (
+              <div className="rounded-lg border border-border p-2 max-h-32 overflow-y-auto text-xs space-y-1">
+                <p className="font-medium text-foreground">Recent requests</p>
+                {slotRequests.slice(0, 5).map((r) => (
+                  <div key={r.id} className="flex justify-between text-muted-foreground">
+                    <span>+{r.requested_extra} slots</span>
+                    <span className={r.status === "approved" ? "text-success" : r.status === "rejected" ? "text-destructive" : "text-warning"}>
+                      {r.status}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
+            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> Send Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
