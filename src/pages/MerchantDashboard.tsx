@@ -371,9 +371,16 @@ const MerchantDashboard = () => {
                     <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1 text-sm" />
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={loading}>Save Product</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowAddProduct(false)}>Cancel</Button>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {replacingId && (
+                    <p className="text-xs text-muted-foreground">
+                      🔄 Replacing existing product. Saving will overwrite it (no new slot used).
+                    </p>
+                  )}
+                  <div className="flex gap-3 ml-auto">
+                    <Button type="submit" disabled={loading}>{replacingId ? "Save Replacement" : "Save Product"}</Button>
+                    <Button type="button" variant="outline" onClick={() => { setShowAddProduct(false); setReplacingId(null); }}>Cancel</Button>
+                  </div>
                 </div>
               </form>
             )}
@@ -419,8 +426,22 @@ const MerchantDashboard = () => {
                       <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? "Pause listing" : "Activate listing"}>
                         {p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit price/stock">
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Replace product (does not consume a slot)"
+                        onClick={() => {
+                          setReplacingId(p.id);
+                          setNewProduct({ name_en: "", name_ar: "", description_en: "", description_ar: "", price: "", category_id: "", condition: "new", pricing_model: "fixed", brand: "", stock: "1" });
+                          setImageFile(null);
+                          setShowAddProduct(true);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)} className="text-destructive">
                         <Trash2 className="h-4 w-4" />
