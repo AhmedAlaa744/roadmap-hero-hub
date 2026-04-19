@@ -147,16 +147,32 @@ const AdminPanel = () => {
           </TabsList>
 
           <TabsContent value="applications" className="mt-6 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold text-foreground">Merchant Requests</h2>
+              <span className="text-xs rounded-full bg-warning/10 text-warning px-2 py-0.5">
+                {applications.filter((a) => a.status === "pending").length} pending
+              </span>
+            </div>
             {applications.map((app) => (
               <div key={app.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-foreground">{app.business_name_en}</p>
-                    {app.business_name_ar && <p className="text-sm text-muted-foreground" dir="rtl">{app.business_name_ar}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">Phone: {app.phone} • Type: {app.business_type || "N/A"}</p>
-                    {app.description && <p className="text-xs text-muted-foreground mt-1">{app.description}</p>}
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-foreground">{app.business_name_en}</p>
+                      {app.business_name_ar && <span className="text-sm text-muted-foreground" dir="rtl">({app.business_name_ar})</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Applicant: <span className="font-medium text-foreground">{app.profile?.full_name || "—"}</span> • Account phone: {app.profile?.phone || "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Business phone: {app.phone} • Type: {app.business_type || "N/A"}
+                    </p>
+                    {app.description && <p className="text-xs text-muted-foreground mt-1 italic">"{app.description}"</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Submitted: {new Date(app.created_at).toLocaleString()}
+                    </p>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize whitespace-nowrap ${
                     app.status === "approved" ? "bg-success/10 text-success" :
                     app.status === "rejected" ? "bg-destructive/10 text-destructive" :
                     "bg-warning/10 text-warning"
@@ -165,14 +181,13 @@ const AdminPanel = () => {
                 {app.status === "pending" && (
                   <div className="flex gap-2 mt-3">
                     <Button size="sm" onClick={() => approveApplication(app)}><CheckCircle className="h-3 w-3 mr-1" /> Approve</Button>
-                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => rejectApplication(app.id)}><XCircle className="h-3 w-3 mr-1" /> Reject</Button>
+                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => rejectApplication(app)}><XCircle className="h-3 w-3 mr-1" /> Reject</Button>
                   </div>
                 )}
               </div>
             ))}
-            {applications.length === 0 && <p className="text-center text-muted-foreground py-8">No applications</p>}
+            {applications.length === 0 && <p className="text-center text-muted-foreground py-8">No merchant requests yet</p>}
           </TabsContent>
-
           <TabsContent value="users" className="mt-6">
             <div className="rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
