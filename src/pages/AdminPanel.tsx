@@ -385,6 +385,14 @@ const AdminPanel = () => {
             <TabsTrigger value="stores">Stores</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="slots">
+              Slot Requests
+              {slotRequests.filter((r) => r.status === "pending").length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-warning text-warning-foreground px-1.5 py-0.5 rounded-full">
+                  {slotRequests.filter((r) => r.status === "pending").length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
 
