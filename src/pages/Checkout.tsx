@@ -66,52 +66,22 @@ const Checkout = () => {
     }
     setLoading(true);
     try {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const orderNum = `GRK-${dateStr}-${rand}`;
+      const { data, error } = await supabase.functions.invoke("place-order", {
+        body: {
+          items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+          building,
+          floor: floor || null,
+          apartment: apartment || null,
+          payment_method: paymentMethod,
+          notes: notes || null,
+        },
+      });
 
-      // Group items by store
-      const storeGroups = items.reduce((acc, item) => {
-        const sid = item.product.store_id;
-        if (!acc[sid]) acc[sid] = [];
-        acc[sid].push(item);
-        return acc;
-      }, {} as Record<string, typeof items>);
-
-      for (const [storeId, storeItems] of Object.entries(storeGroups)) {
-        const storeTotal = storeItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
-        const { data: order, error: orderError } = await supabase
-          .from("orders")
-          .insert({
-            customer_id: user.id,
-            store_id: storeId,
-            order_number: `${orderNum}-${storeId.slice(0, 4)}`,
-            total: storeTotal,
-            building,
-            floor: floor || null,
-            apartment: apartment || null,
-            payment_method: paymentMethod,
-            notes: notes || null,
-          })
-          .select()
-          .single();
-
-        if (orderError) throw orderError;
-
-        const orderItems = storeItems.map((item) => ({
-          order_id: order.id,
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: item.product.price,
-        }));
-
-        const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-        if (itemsError) throw itemsError;
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       clearCart();
-      setOrderNumber(orderNum);
+      setOrderNumber(data.order_number);
       toast.success("Order placed successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to place order");
