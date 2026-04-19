@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import type { Product } from "@/data/mockData";
 
@@ -21,10 +21,17 @@ const pricingBadge = {
 };
 
 const ProductCard = ({ product }: { product: Product }) => {
+  const navigate = useNavigate();
+
+  const goToProduct = () => navigate(`/product/${product.id}`);
+
   return (
-    <Link
-      to={`/product/${product.id}`}
-      className="group block rounded-xl border border-border bg-card overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1"
+    <div
+      onClick={goToProduct}
+      onKeyDown={(e) => { if (e.key === "Enter") goToProduct(); }}
+      role="link"
+      tabIndex={0}
+      className="group block rounded-xl border border-border bg-card overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-muted">
@@ -34,11 +41,9 @@ const ProductCard = ({ product }: { product: Product }) => {
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        {/* Condition badge */}
         <span className={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs font-semibold ${conditionStyles[product.condition]}`}>
           {conditionLabels[product.condition]}
         </span>
-        {/* Pricing model badge */}
         {pricingBadge[product.pricing_model] && (
           <span className="absolute top-3 right-3 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
             {pricingBadge[product.pricing_model]}
@@ -72,7 +77,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           </span>
         )}
       </div>
-    </Link>
+    </div>
   );
 };
 
