@@ -48,7 +48,13 @@ const ProductCard = ({ product }: { product: Product }) => {
 
       {/* Info */}
       <div className="p-4 space-y-2">
-        <p className="text-xs text-muted-foreground font-medium">{product.store_name}</p>
+        <Link
+          to={`/store/${product.store_id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-muted-foreground font-medium hover:text-primary inline-block"
+        >
+          {product.store_name}
+        </Link>
         <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
           {product.name_en}
         </h3>
