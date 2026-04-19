@@ -29,17 +29,22 @@ const AdminPanel = () => {
 
   const fetchAll = async () => {
     const [apps, profs, ords, prods, tix] = await Promise.all([
-      supabase.from("merchant_applications").select("*, profiles(full_name, phone)").order("created_at", { ascending: false }),
+      supabase.from("merchant_applications").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false }),
-      supabase.from("orders").select("*, profiles!orders_customer_id_fkey(full_name)").order("created_at", { ascending: false }),
+      supabase.from("orders").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("*, stores(name_en)").order("created_at", { ascending: false }),
-      supabase.from("support_tickets").select("*, profiles(full_name)").order("created_at", { ascending: false }),
+      supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
     ]);
-    setApplications(apps.data || []);
+    const profileMap = new Map((profs.data || []).map((p: any) => [p.user_id, p]));
+    // Enrich applications, orders, tickets with profile info
+    const enrichedApps = (apps.data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.user_id) }));
+    const enrichedOrders = (ords.data || []).map((o: any) => ({ ...o, profile: profileMap.get(o.customer_id) }));
+    const enrichedTickets = (tix.data || []).map((t: any) => ({ ...t, profile: profileMap.get(t.user_id) }));
+    setApplications(enrichedApps);
     setUsers(profs.data || []);
-    setOrders(ords.data || []);
+    setOrders(enrichedOrders);
     setProducts(prods.data || []);
-    setTickets(tix.data || []);
+    setTickets(enrichedTickets);
     setLoading(false);
   };
 
