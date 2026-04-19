@@ -359,6 +359,42 @@ export type Database = {
           },
         ]
       }
+      slot_requests: {
+        Row: {
+          created_at: string
+          granted_extra: number
+          id: string
+          reason: string | null
+          requested_extra: number
+          status: string
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_extra?: number
+          id?: string
+          reason?: string | null
+          requested_extra: number
+          status?: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_extra?: number
+          id?: string
+          reason?: string | null
+          requested_extra?: number
+          status?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           created_at: string
@@ -541,6 +577,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      merchant_active_slot_limit: {
+        Args: { _store_id: string }
+        Returns: number
+      }
+      user_has_delivered_product: {
+        Args: { _product_id: string; _user_id: string }
         Returns: boolean
       }
       user_has_order_from_store: {
