@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import NotificationBell from "@/components/NotificationBell";
 import {
   DropdownMenu,
@@ -17,22 +18,32 @@ import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [lang, setLang] = useState<"en" | "ar">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const { user, profile, signOut, isAdmin, isMerchant } = useAuth();
   const { totalItems } = useCart();
+  const { lang, toggleLang, t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("Signed out");
+    toast.success(t("Signed out", "تم تسجيل الخروج"));
     navigate("/");
+  };
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    navigate(q ? `/browse?q=${encodeURIComponent(q)}` : "/browse");
+    setIsMenuOpen(false);
   };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="bg-primary px-4 py-1.5 text-center text-sm font-medium text-primary-foreground">
-        🏘️ Serving Dar Misr Al-Andalus • 5th Settlement • New Cairo
+        {t(
+          "🏘️ Serving Dar Misr Al-Andalus • 5th Settlement • New Cairo",
+          "🏘️ نخدم دار مصر الأندلس • التجمع الخامس • القاهرة الجديدة"
+        )}
       </div>
 
       <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
@@ -41,22 +52,24 @@ const Header = () => {
           <span className="hidden sm:block text-sm font-semibold text-muted-foreground">Garak</span>
         </Link>
 
-        <div className="hidden md:flex flex-1 max-w-xl">
+        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder={lang === "en" ? "Search products..." : "ابحث عن منتجات..."}
+              placeholder={t("Search products...", "ابحث عن منتجات...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              dir={lang === "ar" ? "rtl" : "ltr"}
               className="w-full rounded-lg border border-input bg-background px-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-        </div>
+        </form>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setLang(lang === "en" ? "ar" : "en")}
+            onClick={toggleLang}
+            aria-label={t("Switch to Arabic", "Switch to English")}
             className="rounded-md px-2.5 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
           >
             {lang === "en" ? "عربي" : "EN"}
@@ -89,29 +102,29 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card z-50">
-                <DropdownMenuLabel className="truncate">{profile?.full_name || "Account"}</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate">{profile?.full_name || t("Account", "الحساب")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/account")}>
-                  <User className="h-4 w-4 mr-2" /> My Account
+                  <User className="h-4 w-4 mr-2" /> {t("My Account", "حسابي")}
                 </DropdownMenuItem>
                 {isMerchant && (
                   <DropdownMenuItem onClick={() => navigate("/merchant/dashboard")}>
-                    <LayoutDashboard className="h-4 w-4 mr-2" /> Merchant Dashboard
+                    <LayoutDashboard className="h-4 w-4 mr-2" /> {t("Merchant Dashboard", "لوحة التاجر")}
                   </DropdownMenuItem>
                 )}
                 {!isMerchant && !isAdmin && (
                   <DropdownMenuItem onClick={() => navigate("/merchant/apply")}>
-                    <LayoutDashboard className="h-4 w-4 mr-2" /> Become a Seller
+                    <LayoutDashboard className="h-4 w-4 mr-2" /> {t("Become a Seller", "كن بائعًا")}
                   </DropdownMenuItem>
                 )}
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate("/admin")}>
-                    <Shield className="h-4 w-4 mr-2" /> Admin Panel
+                    <Shield className="h-4 w-4 mr-2" /> {t("Admin Panel", "لوحة الإدارة")}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                  <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                  <LogOut className="h-4 w-4 mr-2" /> {t("Sign Out", "تسجيل الخروج")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -129,26 +142,27 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="md:hidden px-4 pb-3">
+      <form onSubmit={handleSearch} className="md:hidden px-4 pb-3">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder={t("Search products...", "ابحث عن منتجات...")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            dir={lang === "ar" ? "rtl" : "ltr"}
             className="w-full rounded-lg border border-input bg-background px-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
-      </div>
+      </form>
 
       {isMenuOpen && (
         <nav className="md:hidden border-t border-border bg-card px-4 py-4 space-y-3">
-          <Link to="/browse" className="block text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Browse All</Link>
-          <Link to="/browse?category=Electronics" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Electronics</Link>
-          <Link to="/browse?category=Fashion" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Fashion</Link>
-          <Link to="/browse?category=Food+%26+Beverages" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Food & Beverages</Link>
-          <Link to="/browse?category=Home+%26+Garden" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>Home & Garden</Link>
+          <Link to="/browse" className="block text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>{t("Browse All", "تصفح الكل")}</Link>
+          <Link to="/browse?category=Electronics" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>{t("Electronics", "إلكترونيات")}</Link>
+          <Link to="/browse?category=Fashion" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>{t("Fashion", "أزياء")}</Link>
+          <Link to="/browse?category=Food+%26+Beverages" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>{t("Food & Beverages", "أطعمة ومشروبات")}</Link>
+          <Link to="/browse?category=Bakery+%26+Sweets" className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>{t("Bakery & Sweets", "مخبوزات وحلويات")}</Link>
         </nav>
       )}
     </header>

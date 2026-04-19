@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import ChatBot from "@/components/ChatBot";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
@@ -27,9 +28,10 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -53,9 +55,10 @@ const App = () => (
             </Routes>
             <ChatBot />
           </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
+          </TooltipProvider>
+        </CartProvider>
+      </AuthProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 

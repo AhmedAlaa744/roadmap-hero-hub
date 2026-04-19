@@ -4,6 +4,7 @@ import { ArrowRight, TrendingUp, Sparkles, ShieldCheck, Truck, Star, Users } fro
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ProductCard from "@/components/ProductCard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -38,6 +39,7 @@ interface DbCategory {
 
 const Index = () => {
   const { user, isAdmin, isMerchant, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [categories, setCategories] = useState<DbCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
@@ -175,7 +177,7 @@ const Index = () => {
               className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center transition-all hover:border-primary hover:shadow-md"
             >
               <span className="text-3xl">{cat.icon}</span>
-              <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{cat.name_en}</span>
+              <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{t(cat.name_en, cat.name_ar)}</span>
             </Link>
           ))}
         </div>
