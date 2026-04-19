@@ -76,7 +76,14 @@ const Login = () => {
         const { error } = await signUp(phone, password, fullName, email.trim() || undefined);
         if (error) {
           const msg = (error.message || "").toLowerCase();
-          if (msg.includes("profiles_email_unique") || msg.includes("duplicate key") || msg.includes("already") && msg.includes("email")) {
+          const looksLikeDuplicateEmail =
+            msg.includes("profiles_email_unique") ||
+            msg.includes("duplicate key") ||
+            (msg.includes("already") && msg.includes("email")) ||
+            // Supabase wraps trigger failures as a generic message; if the user
+            // provided an email, the most likely cause is the unique constraint.
+            (msg.includes("database error saving new user") && !!email.trim());
+          if (looksLikeDuplicateEmail) {
             const friendly = "This email is already in use";
             setEmailError(friendly);
             throw new Error(friendly);
