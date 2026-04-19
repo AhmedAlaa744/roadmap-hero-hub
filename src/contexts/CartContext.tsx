@@ -35,16 +35,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [items]);
 
   const addToCart = (product: Product, qty = 1) => {
+    const stockCap = Math.max(0, Number(product.stock ?? 0));
     setItems((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
+        const nextQty = stockCap > 0 ? Math.min(existing.quantity + qty, stockCap) : existing.quantity + qty;
         return prev.map((i) =>
           i.product.id === product.id
-            ? { ...i, quantity: i.quantity + qty }
+            ? { ...i, product, quantity: nextQty }
             : i
         );
       }
-      return [...prev, { product, quantity: qty }];
+      const nextQty = stockCap > 0 ? Math.min(qty, stockCap) : qty;
+      return [...prev, { product, quantity: nextQty }];
     });
   };
 
@@ -55,11 +58,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const updateQuantity = (productId: string, qty: number) => {
     if (qty <= 0) return removeFromCart(productId);
     setItems((prev) =>
-      prev.map((i) =>
-        i.product.id === productId ? { ...i, quantity: qty } : i
-      )
+      prev.map((i) => {
+        if (i.product.id !== productId) return i;
+        const cap = Math.max(0, Number(i.product.stock ?? 0));
+        const capped = cap > 0 ? Math.min(qty, cap) : qty;
+        return { ...i, quantity: capped };
+      })
     );
   };
+
+  const setCartItems = (next: CartItem[]) => setItems(next);
 
   const clearCart = () => setItems([]);
 

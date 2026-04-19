@@ -32,6 +32,7 @@ const toProduct = (p: any) => ({
   rating: 4.5,
   reviews_count: 0,
   in_stock: p.stock > 0,
+  stock: Number(p.stock ?? 0),
 });
 
 const ProductDetail = () => {

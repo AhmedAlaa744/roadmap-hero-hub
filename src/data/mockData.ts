@@ -14,6 +14,7 @@ export interface Product {
   rating: number;
   reviews_count: number;
   in_stock: boolean;
+  stock: number;
 }
 
 export interface Category {
