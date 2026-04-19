@@ -1,95 +1,68 @@
 
+The user wants me to fix and secure the website and data. They are currently viewing the Security view, so this is about addressing security findings.
 
-# Garak — Updates from Build Prompts File
+Let me check the security scan results and the current state of the database to understand what needs fixing.
+<lov-tool-use id="toolu_vrtx_01U9XaN1Do189hEfkGLBKcdo" name="security--get_scan_results" integration-id="security" data="">
+</lov-tool-use>
 
-The uploaded file contains 6 sequential build prompts. Comparing against what's already built, here's what needs to be added/changed:
+<lov-tool-use id="toolu_vrtx_01GyQB2VsXZQgNwaf5aqUmh1" name="security--get_scan_results" integration-id="security" data="{\"force\": true}">
+</lov-tool-use>
 
-## Already Done (Prompt 1 partial, Prompt 2 partial)
-- Color palette, fonts, mock data, basic pages (Home, Browse, Product Detail, Cart)
-- Header, Footer, ProductCard components
+<lov-tool-use id="toolu_vrtx_01GjEMPfhTu2gNvgc7qbsZjh" name="supabase--linter" integration-id="supabase" data="">
+</lov-tool-use>
+<lov-plan>
+Security hardening plan to fix all scanner findings.
 
-## What Needs to Be Built
+## Issues to fix
 
-### 1. Supabase Integration (Prompt 1)
-- Connect Supabase with the provided URL and anon key
-- Create all database tables: profiles, categories, products, stores, merchant_applications, orders, order_items, reviews, wishlists, support_tickets, notifications
-- Enable RLS with proper policies on all tables
-- Create auto-profile trigger on user signup
-- Create `has_role` security definer function for role checks
+1. **Profiles publicly readable (ERROR)** — Anyone can read all users' full names and phone numbers.
+2. **Product-images storage wide open (ERROR)** — Any logged-in user can upload/overwrite/delete any product image.
+3. **Stores phone publicly visible (WARN)** — Store phone numbers exposed to unauthenticated visitors.
+4. **Public bucket allows listing (WARN)** — Anyone can list every file in `product-images`.
+5. **user_roles privilege escalation risk (WARN)** — No explicit INSERT deny policy for non-admins.
 
-### 2. Home Page Enhancements (Prompt 2 gaps)
-- Add Arabic brand tagline "جارك — سوق جيرانك" above the H1
-- Add a "Log In" coral outline button to hero
-- Add trust banner section: Verified Merchants, Compound Delivery, Rated & Reviewed, Your Neighbors
-- Add "How Garak Works" 3-step section with Arabic subtitles
-- Add product condition explainer section (New/Used/Used as New badges)
-- Load categories and products from Supabase instead of mock data
+## Migration plan
 
-### 3. Authentication System (Prompt 3)
-- Phone-to-email conversion auth (`phone@garak.eg` pattern)
-- Login page with phone + password
-- Customer registration: name, phone, password, terms checkbox
-- Merchant registration: extended form with business details → saves to merchant_applications
-- Auth context provider wrapping the app
-- Protected route handling (cart actions require login)
+**Profiles table**
+- Drop `Profiles viewable by everyone` policy.
+- Add `Users can view own profile` (`auth.uid() = user_id`).
+- Add `Admins can view all profiles` (`has_role(auth.uid(), 'admin')`).
+- Create `public.profiles_public` view (security_invoker) exposing only `user_id`, `full_name`, `avatar_url` — used where merchant/customer display name is needed publicly (e.g., reviews).
 
-### 4. Cart & Checkout (Prompt 3)
-- Real cart state management (context/store instead of hardcoded items)
-- Checkout form: Building (required), Floor, Apartment fields
-- Payment toggle: Cash on Delivery / Online Payment
-- Place Order: creates order + order_items in Supabase, generates order number `GRK-YYYYMMDD-XXXX`
-- Success confirmation with order number
+**Stores table**
+- Drop existing public SELECT policy.
+- Add `Active stores public view` (no phone exposure) via view `public.stores_public` (security_invoker) selecting `id, owner_id, name_en, name_ar, description_en, description_ar, logo_url, is_active`.
+- Restrict base table SELECT to: owner, admins, and customers who have an order from this store (so checkout still works). Update frontend reads to use `stores_public`.
 
-### 5. Customer Account Page (Prompt 3)
-- Profile display: avatar initial, name, phone, role badge
-- Navigation: Browse, My Orders, Wishlist, Log Out
-- Orders list from Supabase
+**user_roles table**
+- Add explicit `Deny user inserts` policy: `INSERT WITH CHECK (false)` for non-admins (admin ALL policy already covers admins).
 
-### 6. Merchant Dashboard (Prompt 4)
-- Stats cards: Total Products, Orders, Revenue, Rating
-- Listing slots progress bar (used/20)
-- Products tab: merchant's own products with edit/delete
-- Orders tab: orders for merchant's store with Confirm/Cancel
-- Add Product form: bilingual names/descriptions, price, category dropdown, condition select, pricing model, image upload to Supabase storage, brand, stock, custom fields
+**Storage: product-images bucket**
+- Drop existing INSERT/UPDATE/DELETE policies.
+- Replace with policies that require the file path's first segment to equal a `store_id` owned by `auth.uid()` (path convention: `{store_id}/{filename}`).
+- Restrict SELECT/listing: keep public read for individual objects (needed to display images), but block listing by adding a policy that requires authentication for list operations OR change bucket to private + serve via signed URLs. Simpler fix: keep bucket public for object reads; the listing warning is acceptable if we accept that filenames are guessable. **Decision needed below.**
 
-### 7. Admin Panel (Prompt 5)
-- Overview tab with aggregate stats from Supabase
-- Applications tab: approve/reject merchant applications (approve → update role + create store)
-- Users tab: table of all profiles with phone numbers
-- Orders tab: all orders with status management
-- Products tab: all products overview
-- Support tab: support tickets with "Mark Resolved"
+## Frontend updates
 
-### 8. AI Chatbot (Prompt 6)
-- Floating teal button on every page (bottom-right)
-- Chat window (360px desktop, full-width mobile)
-- Language auto-detection (Arabic/English, Egyptian dialect)
-- Quick action buttons
-- Keyword-matching fallback responses
-- Support ticket creation when user asks for help
-- Optional OpenAI GPT-4o-mini integration via env variable
+- `MerchantDashboard.tsx` — when uploading product images, prefix path with `${store.id}/`.
+- `Header.tsx`, `AdminPanel.tsx`, anywhere that reads `profiles` for other users' data — switch to `profiles_public` view (Admin panel still uses base `profiles` since admins keep access).
+- Anywhere reading `stores` for public listing (Browse, ProductDetail) — switch to `stores_public` view.
 
-### 9. Font Changes
-- Switch from Plus Jakarta Sans / Inter to **Outfit** (headings) + **IBM Plex Sans Arabic** (body)
+## Question for the user
 
-## Technical Details
+Storage bucket strategy:
 
-- **Database**: 10 tables with RLS, security definer function for role checks, auto-profile trigger
-- **Auth**: Supabase Auth with phone→email conversion pattern
-- **Storage**: Supabase storage bucket `product-images` for merchant uploads
-- **State**: Cart context with localStorage persistence, Auth context
-- **Routes to add**: `/login`, `/account`, `/merchant/dashboard`, `/admin`
-- **New components**: AuthProvider, CartProvider, ChatBot, merchant forms, admin tables
+1. **Keep public, just lock writes** — fastest, image URLs stay simple, `product-images` listing warning remains (low risk).
+2. **Make bucket private, use signed URLs** — fully closes listing, but adds complexity (signed URL generation on every product display).
 
-## Suggested Build Order
-1. Supabase setup + font change
-2. Auth system (login/register pages + context)
-3. Home page enhancements
-4. Cart state + checkout flow
-5. Customer account page
-6. Merchant dashboard
-7. Admin panel
-8. AI chatbot
+Recommend option 1 unless the user wants maximum lockdown.
 
-This is a large scope — shall I proceed with all steps, or would you prefer to tackle them in batches?
+## Files to edit
 
+- New SQL migration (policies + views)
+- `src/pages/MerchantDashboard.tsx` (image upload path + read from `stores_public` if applicable)
+- `src/pages/Browse.tsx`, `src/pages/ProductDetail.tsx` (read stores via `stores_public`)
+- `src/contexts/AuthContext.tsx` (already uses own `user_id` — no change)
+- `src/components/Header.tsx` (no change — reads own profile)
+
+After approval, I'll run the migration and code edits in one pass.
