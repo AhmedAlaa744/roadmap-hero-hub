@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -108,20 +108,45 @@ const MerchantDashboard = () => {
 
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product? This cannot be undone.")) return;
-    const { error, count } = await supabase
+    const { error } = await supabase.from("products").delete().eq("id", id);
+
+    if (error) {
+      // FK violation → product has past orders. Soft-delete by deactivating.
+      if (error.code === "23503" || error.message.includes("foreign key")) {
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ is_active: false })
+          .eq("id", id);
+        if (updateError) {
+          toast.error(updateError.message);
+          return;
+        }
+        toast.success("Product hidden (kept for past order history)");
+        setProducts((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, is_active: false } : p))
+        );
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Product deleted");
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const toggleActive = async (id: string, current: boolean) => {
+    const { error } = await supabase
       .from("products")
-      .delete({ count: "exact" })
+      .update({ is_active: !current })
       .eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    if (!count) {
-      toast.error("Could not delete — you may not have permission.");
-      return;
-    }
-    toast.success("Product deleted");
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    toast.success(!current ? "Product activated" : "Product paused");
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, is_active: !current } : p))
+    );
   };
 
   const startEdit = (p: any) => {
@@ -320,9 +345,13 @@ const MerchantDashboard = () => {
                       </p>
                     )}
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${p.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                    {p.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <button
+                    onClick={() => toggleActive(p.id, p.is_active)}
+                    className={`text-xs px-2 py-1 rounded-full transition-colors cursor-pointer ${p.is_active ? "bg-success/10 text-success hover:bg-success/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                    title={p.is_active ? "Click to pause" : "Click to activate"}
+                  >
+                    {p.is_active ? "Active" : "Paused"}
+                  </button>
                   {editingId === p.id ? (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => saveEdit(p.id)} className="text-success">
@@ -334,6 +363,9 @@ const MerchantDashboard = () => {
                     </>
                   ) : (
                     <>
+                      <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? "Pause listing" : "Activate listing"}>
+                        {p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
