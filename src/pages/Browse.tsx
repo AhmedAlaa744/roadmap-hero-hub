@@ -37,12 +37,14 @@ const Browse = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [catRes, prodRes] = await Promise.all([
+      const [catRes, prodRes, storeRes] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
-        supabase.from("products").select("*, stores(name_en), categories(name_en)").eq("is_active", true),
+        supabase.from("products").select("*, categories(name_en)").eq("is_active", true),
+        supabase.from("stores_public").select("id, name_en"),
       ]);
+      const storeMap = new Map((storeRes.data || []).map((s: any) => [s.id, s.name_en]));
       setCategories(catRes.data || []);
-      setProducts((prodRes.data || []).map(toProduct));
+      setProducts((prodRes.data || []).map((p: any) => toProduct({ ...p, stores: { name_en: storeMap.get(p.store_id) } })));
       setLoading(false);
     };
     fetchData();

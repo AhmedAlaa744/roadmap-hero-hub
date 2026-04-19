@@ -203,6 +203,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       products: {
@@ -273,6 +280,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -466,7 +480,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_public: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          full_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          full_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      stores_public: {
+        Row: {
+          description_ar: string | null
+          description_en: string | null
+          id: string | null
+          is_active: boolean | null
+          logo_url: string | null
+          name_ar: string | null
+          name_en: string | null
+          owner_id: string | null
+        }
+        Insert: {
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+        }
+        Update: {
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {

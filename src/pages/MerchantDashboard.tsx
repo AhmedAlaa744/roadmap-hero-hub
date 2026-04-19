@@ -68,6 +68,7 @@ const MerchantDashboard = () => {
       let imageUrl = "";
       if (imageFile) {
         const ext = imageFile.name.split(".").pop();
+        // Path MUST start with store.id so storage RLS allows the upload
         const path = `${store.id}/${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage.from("product-images").upload(path, imageFile);
         if (uploadError) throw uploadError;
