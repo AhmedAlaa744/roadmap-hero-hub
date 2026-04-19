@@ -14,6 +14,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [businessNameEn, setBusinessNameEn] = useState("");
   const [businessNameAr, setBusinessNameAr] = useState("");
@@ -45,21 +46,43 @@ const Login = () => {
     }
   };
 
+  const validateEmail = (value: string): string | null => {
+    const v = value.trim();
+    if (!v) return null; // optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Please enter a valid email address";
+  };
+
+  const handleEmailBlur = () => {
+    setEmailError(validateEmail(email));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isRegister && !agreed) {
       toast.error("Please agree to the terms and conditions");
       return;
     }
-    if (isRegister && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast.error("Please enter a valid email address");
-      return;
+    if (isRegister) {
+      const err = validateEmail(email);
+      if (err) {
+        setEmailError(err);
+        toast.error(err);
+        return;
+      }
     }
     setLoading(true);
     try {
       if (isRegister) {
         const { error } = await signUp(phone, password, fullName, email.trim() || undefined);
-        if (error) throw error;
+        if (error) {
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("profiles_email_unique") || msg.includes("duplicate key") || msg.includes("already") && msg.includes("email")) {
+            const friendly = "This email is already in use";
+            setEmailError(friendly);
+            throw new Error(friendly);
+          }
+          throw error;
+        }
 
         if (isMerchant && businessNameEn) {
           // Submit merchant application after a short delay for profile creation
@@ -133,13 +156,20 @@ const Login = () => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null); }}
+                onBlur={handleEmailBlur}
                 placeholder="you@example.com"
-                className="mt-1"
+                className={`mt-1 ${emailError ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 dir="ltr"
                 autoComplete="email"
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? "email-error" : undefined}
               />
-              <p className="text-xs text-muted-foreground mt-1">We'll use it to send order updates if you provide it.</p>
+              {emailError ? (
+                <p id="email-error" className="text-xs text-destructive mt-1">{emailError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">We'll use it to send order updates if you provide it.</p>
+              )}
             </div>
           )}
 
