@@ -177,9 +177,12 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("place-order error:", err);
-    return new Response(JSON.stringify({ error: (err as Error).message ?? "Server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
