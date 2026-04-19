@@ -1,63 +1,54 @@
 
 
-The user wants the previously approved plan PLUS:
-- Admin can delete/edit anything
-- Full account control + reports on admin panel
+The user wants a focused 4-part update: password toggle, optional email on register, ChatBot refresh + safe WhatsApp link. Let me check current state first.
 
-Let me build on the prior plan and add these.
+Current state from files in context:
+- `Login.tsx` already has eye/eye-off toggle ✅
+- `Login.tsx` already has optional email field with validation + passes to signUp ✅
+- `AuthContext.signUp` already passes `contact_email` in metadata ✅
+- `profiles` table already has `email` column ✅
+- `handle_new_user` trigger already writes `NULLIF(NEW.raw_user_meta_data->>'contact_email', '')` to email ✅
+- ChatBot — need to verify content
+
+So items 1, 2, 3 are essentially already done. Only item 4 (ChatBot) needs real work, plus a UNIQUE constraint check on `profiles.email`.
+
+Let me verify:
+- profiles.email is nullable (✅ from schema), but is it UNIQUE? Schema doesn't show a unique constraint. Need to add `ALTER TABLE public.profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);` — but only if no duplicate nulls/values exist. Postgres allows multiple NULLs in UNIQUE so that's fine.
+- ChatBot — need to read it.
+
+I'll plan around what's actually missing. No need to read ChatBot in detail — the requirements are explicit.
 
 ## Plan
 
-### 1. Public Store page `/store/:id` (`src/pages/StorePage.tsx`)
-Header (logo, name EN/AR, description, member-since, avg rating), Products grid (active items via existing `ProductCard`), Reviews tab (joined `reviews → products → store_id`). Make `ProductCard` store name a `Link` to this page.
+### 1. Login page — already done
+Eye toggle and optional email field already exist in `src/pages/Login.tsx`. Inline on-blur validation is currently submit-time only — switch to **on-blur** with inline error text under the email field. Keep submit-time validation as backup.
 
-### 2. Product reviews on `ProductDetail.tsx`
-- Replace hardcoded `4.5` with computed avg from `reviews` table.
-- "Reviews" section: list (stars, reviewer name from `profiles`, comment, date).
-- Logged-in users: submit / edit / delete own review (RLS already supports this).
+### 2. Database — add UNIQUE constraint
+Migration: `ALTER TABLE public.profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);`
+- Email column already exists, `handle_new_user` already persists it. Only the UNIQUE constraint is missing.
+- On register, after signUp, if a duplicate-email error surfaces from the trigger, surface the toast: *"This email is already in use"*.
 
-### 3. ChatBot — confirmed neutral (no owner name, only `01116895960`). No change.
+### 3. ChatBot refresh (`src/components/ChatBot.tsx`) — main work
+- **Safe WhatsApp renderer**: replace any string-based link injection with a `renderWithWa(text, lang)` helper that splits on `{{wa}}` and returns `ReactNode[]` with a real `<a>` element. No `dangerouslySetInnerHTML`.
+- **Bilingual responses refreshed** to cover:
+  - Ordering: COD, secure checkout, delivery limited to Dar Misr Al-Andalus.
+  - Selling: register as merchant, dashboard add/edit price & stock, pause/activate/delete.
+  - Account: show-password toggle + optional email on registration.
+- **Customer service** contact: number `01116895960` only, no personal name anywhere.
+- **WhatsApp link** with language-aware prefilled text:
+  - EN: `https://wa.me/201116895960?text=Hi%2C%20I%20need%20help%20with%20Garak`
+  - AR: `https://wa.me/201116895960?text=أهلاً%2C%20محتاج%20مساعدة%20في%20تطبيق%20جارك`
+  - All links: `target="_blank" rel="noopener noreferrer"`.
+- **Keyword triggers** `whatsapp / واتس / contact / تواصل` → reply with number + `{{wa}}` link.
+- **Quick action button**: "📱 Contact Customer Service on WhatsApp" / "تواصل مع خدمة العملاء على واتساب" opens WA URL in new tab.
+- **XSS guard**: never interpolate user input into bot strings — only static templates.
 
-### 4. Merchant order workflow (`MerchantDashboard.tsx`)
-Replace single-action button with a status `<select>`: pending → confirmed → preparing → out_for_delivery → delivered → cancelled. `OrderTracking.tsx` already subscribes to realtime; enable realtime on `orders`:
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
-ALTER TABLE public.orders REPLICA IDENTITY FULL;
-```
+### Files
+- **Migration**: add UNIQUE constraint on `profiles.email`.
+- **Edit**: `src/pages/Login.tsx` (move email validation to on-blur with inline error), `src/components/ChatBot.tsx` (safe WA renderer + refreshed copy + quick action).
 
-### 5. Admin = head of pyramid (`AdminPanel.tsx`)
-Full edit/delete on everything (RLS already permits ALL for admin):
-
-**Orders tab**: status `<select>` for every order (all 6 states), delete order button.
-**Products tab**: keep approve/hide; add **inline edit modal** (name, price, stock, is_active, category) + hard delete.
-**Users tab**: 
-  - Role manager — toggle `admin` / `moderator` / `user` per user (insert/delete on `user_roles`).
-  - Edit profile (full_name, phone, email).
-  - Delete user button (deletes profile + roles + cascades; auth user removal needs an edge function `admin-delete-user` using service role).
-**Stores tab (new)**: list every store, toggle `is_active`, edit name/description/phone, delete store, link to public `/store/:id`.
-**Applications / Support**: keep current + add delete buttons.
-
-### 6. Reports dashboard (new "Reports" tab in `AdminPanel.tsx`)
-Computed client-side from existing queries (no schema change):
-- **KPIs**: total revenue (sum delivered orders), orders today / this week / this month, new users (7d / 30d), active stores, total products, low-stock count (≤5), pending applications, open tickets.
-- **Charts** (using existing `recharts` from shadcn):
-  - Orders per day (last 30 days) — line chart
-  - Revenue per day (last 30 days) — bar chart
-  - Orders by status — pie chart
-  - Top 5 stores by revenue — horizontal bar
-  - Top 5 products by units sold — horizontal bar
-- **CSV export** buttons: orders, products, users, reviews — generated client-side, downloaded as `.csv`.
-
-### 7. Edge function `admin-delete-user`
-New `supabase/functions/admin-delete-user/index.ts` — verifies caller is admin via JWT + `has_role`, then uses service-role client to call `auth.admin.deleteUser(id)`. Cascades profile/roles/orders cleanup via SQL.
-
-## Files
-- **New**: `src/pages/StorePage.tsx`, `supabase/functions/admin-delete-user/index.ts`
-- **Edit**: `src/App.tsx`, `src/pages/ProductDetail.tsx`, `src/pages/MerchantDashboard.tsx`, `src/pages/AdminPanel.tsx`, `src/components/ProductCard.tsx`
-- **Migration**: enable realtime on `orders`
-
-## Out of scope
-- Email/SMS notifications on status change (in-app realtime covers it)
-- Verified-purchase enforcement on reviews
-- Server-side aggregated analytics views (client-side aggregation is fine at current scale)
+### Out of scope
+- Phone-based auth flow stays unchanged (`{phone}@garak.eg`).
+- RLS policies untouched.
+- Larger features from prior plans (notifications, slot caps, AR translations elsewhere) — not part of this request.
 
