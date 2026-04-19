@@ -31,6 +31,12 @@ const MerchantDashboard = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [editStock, setEditStock] = useState("");
+  const [replacingId, setReplacingId] = useState<string | null>(null);
+  const [slotLimit, setSlotLimit] = useState<number>(20);
+  const [slotRequests, setSlotRequests] = useState<any[]>([]);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestExtra, setRequestExtra] = useState("5");
+  const [requestReason, setRequestReason] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
