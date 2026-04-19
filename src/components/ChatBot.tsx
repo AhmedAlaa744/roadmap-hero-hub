@@ -10,9 +10,11 @@ interface Message {
   text: string;
 }
 
-const OWNER_NAME = "Ahmed";
-const OWNER_PHONE_DISPLAY = "01116895960";
-const WHATSAPP_URL = "https://wa.me/201116895960";
+const SUPPORT_PHONE_DISPLAY = "01116895960";
+const WA_GREETING_EN = encodeURIComponent("Hi, I need help with Garak");
+const WA_GREETING_AR = encodeURIComponent("أهلاً، محتاج مساعدة في تطبيق جارك");
+const WHATSAPP_URL_EN = `https://api.whatsapp.com/send?phone=201116895960&text=${WA_GREETING_EN}`;
+const WHATSAPP_URL_AR = `https://api.whatsapp.com/send?phone=201116895960&text=${WA_GREETING_AR}`;
 const WA_TOKEN = "{{wa}}";
 
 const quickActions = [
@@ -21,7 +23,7 @@ const quickActions = [
   { label: "✏️ Manage my products", text: "How do I edit, pause or delete my products?" },
   { label: "🔒 Account & login help", text: "I need help with my account or login" },
   { label: "📞 Contact support", text: "I need help from support" },
-  { label: "📱 Contact owner on WhatsApp", text: "How do I contact the owner on WhatsApp?" },
+  { label: "📱 Contact customer service on WhatsApp", text: "How do I contact customer service on WhatsApp?" },
 ];
 
 const detectLanguage = (text: string): "ar" | "en" => {
@@ -29,28 +31,27 @@ const detectLanguage = (text: string): "ar" | "en" => {
   return arabicRegex.test(text) ? "ar" : "en";
 };
 
-const ownerLine = (lang: "ar" | "en") =>
+const supportLine = (lang: "ar" | "en") =>
   lang === "ar"
-    ? `\n\nلو محتاج مساعدة إضافية، تواصل مع المالك ${OWNER_NAME} على ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`
-    : `\n\nNeed more help? Contact the owner ${OWNER_NAME} at ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`;
+    ? `\n\nمحتاج مساعدة إضافية؟ تواصل مع خدمة العملاء على ${SUPPORT_PHONE_DISPLAY} — ${WA_TOKEN}.`
+    : `\n\nNeed more help? Contact our customer service at ${SUPPORT_PHONE_DISPLAY} — ${WA_TOKEN}.`;
 
 const getResponse = (text: string, lang: "ar" | "en"): string => {
   const lower = text.toLowerCase();
   const isAr = lang === "ar";
 
-  // WhatsApp / contact owner
+  // WhatsApp / contact support
   if (
     lower.includes("whatsapp") ||
     lower.includes("واتس") ||
-    lower.includes("owner") ||
-    lower.includes("ahmed") ||
-    lower.includes("احمد") ||
-    lower.includes("أحمد") ||
-    lower.includes("contact owner")
+    lower.includes("contact") ||
+    lower.includes("تواصل") ||
+    lower.includes("customer service") ||
+    lower.includes("خدمة العملاء")
   ) {
     return isAr
-      ? `تقدر تتواصل مع المالك ${OWNER_NAME} مباشرة على ${OWNER_PHONE_DISPLAY}. ${WA_TOKEN} 📱`
-      : `You can reach the owner ${OWNER_NAME} directly at ${OWNER_PHONE_DISPLAY}. ${WA_TOKEN} 📱`;
+      ? `تقدر تتواصل مع خدمة العملاء مباشرة على ${SUPPORT_PHONE_DISPLAY}. ${WA_TOKEN} 📱`
+      : `You can reach our customer service directly at ${SUPPORT_PHONE_DISPLAY}. ${WA_TOKEN} 📱`;
   }
 
   // Ordering
@@ -59,7 +60,7 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
       (isAr
         ? "عشان تطلب: تصفح المنتجات، ضيف اللي عايزه للسلة، وبعدين اضغط Checkout. هتدخل عنوانك جوه كمبوند دار مصر الأندلس والدفع كاش عند الاستلام. الطلب بيتسجل بشكل آمن من السيرفر مباشرة. 🛒"
         : "To order: browse products, add to cart, then click Checkout. Enter your address inside Dar Misr Al-Andalus compound and pay cash on delivery. Orders are placed securely on the server. 🛒") +
-      ownerLine(lang)
+      supportLine(lang)
     );
   }
 
@@ -76,11 +77,11 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
       (isAr
         ? "عشان تبقى بائع: سجل حساب جديد واختار 'I want to sell products'، واملا بيانات نشاطك. هنراجع الطلب ونرد عليك. 🏪"
         : "To become a seller: create an account, tick 'I want to sell products', and fill in your business details. We'll review your application and get back to you. 🏪") +
-      ownerLine(lang)
+      supportLine(lang)
     );
   }
 
-  // Managing products (edit / pause / delete)
+  // Managing products
   if (
     lower.includes("edit") ||
     lower.includes("price") ||
@@ -100,11 +101,11 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
       (isAr
         ? "من Merchant Dashboard تقدر: تعدّل السعر والمخزون، توقف المنتج مؤقتًا (Pause) من غير حذف، تفعّله تاني، أو تحذفه نهائيًا لو مفيش طلبات عليه. ✏️"
         : "From your Merchant Dashboard you can: edit price and stock, pause a product (without deleting it), reactivate it, or delete it permanently if it has no past orders. ✏️") +
-      ownerLine(lang)
+      supportLine(lang)
     );
   }
 
-  // Account / login / password / email
+  // Account / login
   if (
     lower.includes("account") ||
     lower.includes("login") ||
@@ -122,7 +123,7 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
       (isAr
         ? "في صفحة تسجيل الدخول تقدر تظهر/تخفي كلمة السر بزرار العين 👁️، وعند إنشاء حساب جديد تقدر تضيف الإيميل (اختياري) عشان نبعتلك تحديثات الطلبات. 🔒"
         : "On the login page you can show/hide your password with the eye icon 👁️, and when creating a new account you can add an email (optional) so we can send you order updates. 🔒") +
-      ownerLine(lang)
+      supportLine(lang)
     );
   }
 
@@ -138,7 +139,7 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
     return (
       (isAr
         ? "أنا هنا أساعدك! اكتب 'create ticket' أو 'تذكرة' وهسجلك تذكرة دعم لفريقنا. 💬"
-        : "I'm here to help! Type 'create ticket' and I'll open a support ticket for our team. 💬") + ownerLine(lang)
+        : "I'm here to help! Type 'create ticket' and I'll open a support ticket for our team. 💬") + supportLine(lang)
     );
   }
 
@@ -147,7 +148,7 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
     return (
       (isAr
         ? "التوصيل متاح داخل كمبوند دار مصر الأندلس فقط، والتوصيل مجاني على معظم الطلبات. 🚚"
-        : "Delivery is available only within Dar Misr Al-Andalus compound — free on most orders. 🚚") + ownerLine(lang)
+        : "Delivery is available only within Dar Misr Al-Andalus compound — free on most orders. 🚚") + supportLine(lang)
     );
   }
 
@@ -156,20 +157,21 @@ const getResponse = (text: string, lang: "ar" | "en"): string => {
     (isAr
       ? "أهلاً! أنا مساعد جارك. ممكن أساعدك في الطلبات، البيع، إدارة منتجاتك، أو الحساب. اكتب سؤالك! 😊"
       : "Hi there! I'm the Garak assistant. I can help you with orders, selling, managing your products, or your account. Just ask! 😊") +
-    ownerLine(lang)
+    supportLine(lang)
   );
 };
 
 // Safe renderer: only injects the WhatsApp <a> at the {{wa}} token. No HTML parsing.
 const renderMessage = (text: string, lang: "ar" | "en") => {
   const linkLabel = lang === "ar" ? "كلّمنا على واتساب" : "Chat with us on WhatsApp";
+  const href = lang === "ar" ? WHATSAPP_URL_AR : WHATSAPP_URL_EN;
   const parts = text.split(WA_TOKEN);
   return parts.map((part, i) => (
     <span key={i}>
       {part}
       {i < parts.length - 1 && (
         <a
-          href={WHATSAPP_URL}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline font-medium"
@@ -237,8 +239,8 @@ const ChatBot = () => {
                 role: "bot",
                 text:
                   lang === "ar"
-                    ? `تم إنشاء تذكرة الدعم بنجاح! ✅ فريقنا هيتواصل معاك قريب. لو مستعجل تواصل مع ${OWNER_NAME} على ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`
-                    : `Support ticket created successfully! ✅ Our team will reach out soon. For urgent issues contact ${OWNER_NAME} at ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`,
+                    ? `تم إنشاء تذكرة الدعم بنجاح! ✅ فريقنا هيتواصل معاك قريب. لو مستعجل تواصل مع خدمة العملاء على ${SUPPORT_PHONE_DISPLAY} — ${WA_TOKEN}.`
+                    : `Support ticket created successfully! ✅ Our team will reach out soon. For urgent issues contact customer service at ${SUPPORT_PHONE_DISPLAY} — ${WA_TOKEN}.`,
               },
             ]);
             toast.success("Support ticket created");
@@ -290,7 +292,7 @@ const ChatBot = () => {
                     key={qa.label}
                     onClick={() => {
                       if (qa.label.startsWith("📱")) {
-                        window.open(WHATSAPP_URL, "_blank", "noopener,noreferrer");
+                        window.open(WHATSAPP_URL_EN, "_blank", "noopener,noreferrer");
                       }
                       sendMessage(qa.text);
                     }}
