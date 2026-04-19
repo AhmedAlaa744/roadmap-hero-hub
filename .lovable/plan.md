@@ -1,51 +1,62 @@
 
-The user wants 4 things on the Login page and ChatBot:
 
-1. **Show/hide password toggle** on login page (eye icon)
-2. **Optional email field** during registration
-3. **Update ChatBot** knowledge with recent site updates (merchant editing, pause/activate, secure checkout, etc.)
-4. **ChatBot owner contact**: recommend contacting Ahmed at `01116895960` and include a WhatsApp link `https://wa.me/201116895960` for any WhatsApp-related item
+## Goal
+Enforce per-product stock cap (set by merchant) end-to-end so customers can never order more than the available quantity.
 
-Let me confirm my read of the current code (already in context):
-- `src/pages/Login.tsx` — has phone + password fields, no email, no show-password toggle
-- `src/components/ChatBot.tsx` — has hardcoded bilingual responses, no owner contact, no WhatsApp link
-
-Database note: `profiles` table currently stores `full_name`, `phone`, `avatar_url`. To store optional email, I'll need to add an `email` column. I'll add it as nullable so existing users aren't affected, and pass it through `signUp` user metadata so the existing profile-creation trigger picks it up (or update the profile right after signup if the trigger doesn't handle email).
+## Current state
+- **Merchant** already sets `stock` in the dashboard (existing field).
+- **Server** (`place-order` edge function) already blocks orders with `p.stock < it.quantity` ✅ — security is fine.
+- **Client UI** does NOT enforce the cap, and stock is **not decremented** after a successful order, so the cap silently grows stale.
 
 ## Plan
 
-### 1. Login page — show/hide password
-- Add an eye / eye-off icon button inside the password input (right side).
-- Toggle `type` between `password` and `text` via local state.
-- Apply to both Sign In and Register forms (single password field, so one toggle).
+### 1. Carry `stock` through to the client
+- Add `stock: number` to the `Product` interface in `src/data/mockData.ts`.
+- Set `stock: p.stock` in every `toProduct(...)` mapper:
+  - `src/pages/ProductDetail.tsx`
+  - `src/pages/Browse.tsx`
+  - `src/pages/Index.tsx`
+  - any other place a product is built (search/grep for `toProduct` / `in_stock:`).
 
-### 2. Login page — optional email on register
-- Add an `Email (optional)` input, shown only when `isRegister` is true.
-- Validate format only when filled (zod-style minimal check).
-- Pass email into `signUp` metadata; update the profile row with email after signup.
+### 2. ProductDetail page — cap quantity selector
+- `+` button disabled when `quantity >= product.stock`.
+- `−` button disabled at `1`.
+- Show `Only X left` label next to the selector when `stock <= 5`.
+- If `stock === 0`: hide quantity selector + Add to Cart, show "Out of Stock" badge instead.
+- When clicking Add to Cart, clamp `quantity` to `min(quantity, stock)` and show toast if clamped.
 
-### 3. Database — add email to profiles
-- New migration: `ALTER TABLE public.profiles ADD COLUMN email text;`
-- Update the existing `handle_new_user` trigger to also persist `email` from `raw_user_meta_data` if present.
+### 3. Cart page — cap quantity buttons
+- `updateQuantity` `+` disabled when `item.quantity >= item.product.stock`.
+- Show small `Max: X` hint under the qty stepper.
+- On checkout click, re-validate each line against `product.stock`; if any exceeds, block navigation and toast.
 
-### 4. ChatBot updates
-Refresh the bilingual response logic with current site reality:
-- **Ordering**: cash on delivery, secure server-side checkout, delivery inside Dar Misr Al-Andalus.
-- **Selling**: register as merchant, dashboard supports add / edit price & stock / pause-activate / delete.
-- **Account help**: mention show-password and optional email on login page.
-- **Owner contact (NEW)**: For anything the bot can't resolve, recommend contacting **Ahmed — 01116895960**, and render a WhatsApp link:  
-  `<a href="https://wa.me/201116895960" target="_blank" rel="noopener noreferrer">Chat with us on WhatsApp</a>`
-- Update message rendering: switch from plain text to safe rendering of the WhatsApp link only (whitelisted), so the anchor actually becomes clickable. Use a tiny renderer that splits on a placeholder like `{{wa}}` and injects an `<a>` element — no `dangerouslySetInnerHTML`, no markdown lib.
-- Add a new quick action: **"📱 Contact owner on WhatsApp"** that opens `https://wa.me/201116895960` in a new tab.
-- Any time a user mentions "whatsapp" / "واتس", reply with the WhatsApp link + Ahmed's number.
+### 4. CartContext — defensive cap in `addToCart`
+- When adding a product, if `existing.quantity + qty > product.stock`, cap to `product.stock` and surface a flag the caller can toast on. Simplest: clamp silently and let the page show toast.
 
-### Files to edit
-- `src/pages/Login.tsx` — show-password toggle, optional email field, pass email to signUp
-- `src/contexts/AuthContext.tsx` — accept optional email in `signUp`, write to profile after insert
-- `src/components/ChatBot.tsx` — refreshed responses, WhatsApp quick action, safe link renderer
-- New SQL migration — add `email` column to `profiles`, update trigger
+### 5. Auto-decrement stock after order (server)
+In `supabase/functions/place-order/index.ts`, after `order_items` insert succeeds for a store group, decrement each product's stock:
+```ts
+for (const it of group.items) {
+  const p = productMap.get(it.product_id)!;
+  await admin.from("products")
+    .update({ stock: p.stock - it.quantity })
+    .eq("id", it.product_id);
+}
+```
+- Refresh `productMap` per loop so concurrent items in the same order don't double-spend (recompute remaining from in-memory map).
+- If stock would drop to 0, that's fine — RLS `is_active` toggle is a separate concern; stock=0 just blocks future orders via existing check.
 
-### Technical notes
-- Phone-to-email synthetic login (`{phone}@garak.eg`) stays unchanged — the new optional email is just contact info stored on the profile, NOT used for auth.
-- WhatsApp number normalized to international format: `201116895960` (Egypt country code 20, drop leading 0).
-- Keep all RLS rules intact; `profiles` already restricts to owner.
+### 6. Refresh stale carts
+- On Cart page mount, fetch latest `stock` for each `item.product.id` and clamp quantities; toast "Some items were adjusted to match available stock" if any line was capped.
+
+## Files to touch
+- `src/data/mockData.ts` — add `stock` to interface
+- `src/pages/ProductDetail.tsx` — cap quantity controls + UI
+- `src/pages/Cart.tsx` — cap qty + on-mount stock refresh + checkout guard
+- `src/pages/Browse.tsx`, `src/pages/Index.tsx` — set `stock` in mapper
+- `src/contexts/CartContext.tsx` — clamp `addToCart`
+- `supabase/functions/place-order/index.ts` — decrement stock after successful insert
+
+## Out of scope
+- Reservations / hold timers (true atomic stock locking) — overkill for a community marketplace. The combination of server-side check + immediate decrement gives strong enough protection.
+
