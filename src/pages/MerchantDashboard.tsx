@@ -398,25 +398,21 @@ const MerchantDashboard = () => {
                   </div>
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
-                  {o.status !== "delivered" && o.status !== "cancelled" && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {o.status === "pending" && (
-                        <>
-                          <Button size="sm" onClick={() => updateOrderStatus(o.id, "confirmed")}><CheckCircle className="h-3 w-3 mr-1" /> Confirm</Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => updateOrderStatus(o.id, "cancelled")}><XCircle className="h-3 w-3 mr-1" /> Cancel</Button>
-                        </>
-                      )}
-                      {o.status === "confirmed" && (
-                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "preparing")}>Mark Preparing</Button>
-                      )}
-                      {o.status === "preparing" && (
-                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "out_for_delivery")}>Out for Delivery</Button>
-                      )}
-                      {o.status === "out_for_delivery" && (
-                        <Button size="sm" onClick={() => updateOrderStatus(o.id, "delivered")}><CheckCircle className="h-3 w-3 mr-1" /> Mark Delivered</Button>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <label className="text-xs text-muted-foreground">Set status:</label>
+                    <select
+                      value={o.status}
+                      onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                      className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="preparing">Preparing</option>
+                      <option value="out_for_delivery">Out for Delivery</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
                 </div>
               ))}
               {orders.length === 0 && <p className="text-center text-muted-foreground py-8">No orders yet</p>}
