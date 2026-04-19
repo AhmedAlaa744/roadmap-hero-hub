@@ -51,22 +51,33 @@ const ProductDetail = () => {
       setLoading(true);
       const { data } = await supabase
         .from("products")
-        .select("*, stores(name_en), categories(name_en)")
+        .select("*, categories(name_en)")
         .eq("id", id)
         .single();
 
       if (data) {
-        const p = toProduct(data);
+        const { data: storeData } = await supabase
+          .from("stores_public")
+          .select("name_en")
+          .eq("id", data.store_id)
+          .maybeSingle();
+        const p = toProduct({ ...data, stores: { name_en: storeData?.name_en } });
         setProduct(p);
         // Fetch related
         const { data: related } = await supabase
           .from("products")
-          .select("*, stores(name_en), categories(name_en)")
+          .select("*, categories(name_en)")
           .eq("category_id", data.category_id)
           .eq("is_active", true)
           .neq("id", id!)
           .limit(4);
-        setRelatedProducts((related || []).map(toProduct));
+        const relatedStoreIds = [...new Set((related || []).map((r: any) => r.store_id))];
+        const { data: relStores } = await supabase
+          .from("stores_public")
+          .select("id, name_en")
+          .in("id", relatedStoreIds);
+        const storeMap = new Map((relStores || []).map((s: any) => [s.id, s.name_en]));
+        setRelatedProducts((related || []).map((r: any) => toProduct({ ...r, stores: { name_en: storeMap.get(r.store_id) } })));
       }
       setLoading(false);
     };
