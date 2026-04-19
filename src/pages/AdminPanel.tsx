@@ -222,7 +222,7 @@ const AdminPanel = () => {
               <div key={o.id} className="rounded-xl border border-border bg-card p-4 flex justify-between items-center">
                 <div>
                   <p className="font-semibold text-foreground">{o.order_number}</p>
-                  <p className="text-xs text-muted-foreground">{o.profiles?.full_name || "Customer"} • {new Date(o.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{o.profile?.full_name || "Customer"} • {new Date(o.created_at).toLocaleDateString()}</p>
                   <p className="text-primary font-bold text-sm">EGP {Number(o.total).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ const AdminPanel = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-semibold text-foreground">{t.subject}</p>
-                    <p className="text-xs text-muted-foreground">{t.profiles?.full_name || "User"} • {new Date(t.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{t.profile?.full_name || "User"} • {new Date(t.created_at).toLocaleDateString()}</p>
                     <p className="text-sm text-muted-foreground mt-1">{t.message}</p>
                   </div>
                   <span className={`text-xs font-medium px-2 py-1 rounded-full ${t.status === "resolved" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{t.status}</span>
