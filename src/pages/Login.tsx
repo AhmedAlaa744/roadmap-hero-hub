@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +12,8 @@ const Login = () => {
   const [isMerchant, setIsMerchant] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [businessNameEn, setBusinessNameEn] = useState("");
   const [businessNameAr, setBusinessNameAr] = useState("");
@@ -48,10 +51,14 @@ const Login = () => {
       toast.error("Please agree to the terms and conditions");
       return;
     }
+    if (isRegister && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setLoading(true);
     try {
       if (isRegister) {
-        const { error } = await signUp(phone, password, fullName);
+        const { error } = await signUp(phone, password, fullName, email.trim() || undefined);
         if (error) throw error;
 
         if (isMerchant && businessNameEn) {
@@ -118,9 +125,46 @@ const Login = () => {
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" required className="mt-1" dir="ltr" />
           </div>
 
+          {isRegister && (
+            <div>
+              <label className="text-sm font-medium text-foreground">
+                Email <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="mt-1"
+                dir="ltr"
+                autoComplete="email"
+              />
+              <p className="text-xs text-muted-foreground mt-1">We'll use it to send order updates if you provide it.</p>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium text-foreground">Password</label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters" required minLength={6} className="mt-1" />
+            <div className="relative mt-1">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+                required
+                minLength={6}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {isRegister && (

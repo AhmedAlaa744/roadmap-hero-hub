@@ -10,11 +10,18 @@ interface Message {
   text: string;
 }
 
+const OWNER_NAME = "Ahmed";
+const OWNER_PHONE_DISPLAY = "01116895960";
+const WHATSAPP_URL = "https://wa.me/201116895960";
+const WA_TOKEN = "{{wa}}";
+
 const quickActions = [
   { label: "🛒 How to order?", text: "How do I place an order?" },
   { label: "🏪 Become a seller", text: "How can I become a seller?" },
+  { label: "✏️ Manage my products", text: "How do I edit, pause or delete my products?" },
+  { label: "🔒 Account & login help", text: "I need help with my account or login" },
   { label: "📞 Contact support", text: "I need help from support" },
-  { label: "🔒 Account help", text: "I have a problem with my account" },
+  { label: "📱 Contact owner on WhatsApp", text: "How do I contact the owner on WhatsApp?" },
 ];
 
 const detectLanguage = (text: string): "ar" | "en" => {
@@ -22,39 +29,156 @@ const detectLanguage = (text: string): "ar" | "en" => {
   return arabicRegex.test(text) ? "ar" : "en";
 };
 
+const ownerLine = (lang: "ar" | "en") =>
+  lang === "ar"
+    ? `\n\nلو محتاج مساعدة إضافية، تواصل مع المالك ${OWNER_NAME} على ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`
+    : `\n\nNeed more help? Contact the owner ${OWNER_NAME} at ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`;
+
 const getResponse = (text: string, lang: "ar" | "en"): string => {
   const lower = text.toLowerCase();
   const isAr = lang === "ar";
 
-  if (lower.includes("order") || lower.includes("طلب") || lower.includes("اطلب")) {
+  // WhatsApp / contact owner
+  if (
+    lower.includes("whatsapp") ||
+    lower.includes("واتس") ||
+    lower.includes("owner") ||
+    lower.includes("ahmed") ||
+    lower.includes("احمد") ||
+    lower.includes("أحمد") ||
+    lower.includes("contact owner")
+  ) {
     return isAr
-      ? "عشان تطلب، تصفح المنتجات وضيفها للسلة، وبعدين اعمل checkout وحط عنوانك في الكمبوند. الدفع عند الاستلام متاح! 🛒"
-      : "To place an order, browse products and add them to your cart, then checkout with your compound address. Cash on delivery is available! 🛒";
-  }
-  if (lower.includes("sell") || lower.includes("merchant") || lower.includes("بائع") || lower.includes("اب")) {
-    return isAr
-      ? "عشان تبقى بائع، سجل حساب جديد واختار 'أريد بيع منتجات'. هنراجع طلبك وهنرد عليك في أقرب وقت! 🏪"
-      : "To become a seller, create an account and check 'I want to sell products'. We'll review your application and get back to you soon! 🏪";
-  }
-  if (lower.includes("support") || lower.includes("help") || lower.includes("مساعدة") || lower.includes("دعم")) {
-    return isAr
-      ? "أنا هنا عشان أساعدك! لو محتاج مساعدة إضافية، اكتب 'تذكرة دعم' وهنوصلك بفريقنا. 💬"
-      : "I'm here to help! If you need further assistance, type 'create ticket' and we'll connect you with our team. 💬";
-  }
-  if (lower.includes("ticket") || lower.includes("تذكرة")) {
-    return isAr
-      ? "عشان أعملك تذكرة دعم، اكتب مشكلتك وهبعتها لفريق الدعم. 📝"
-      : "To create a support ticket, describe your issue and I'll submit it for you. 📝";
-  }
-  if (lower.includes("delivery") || lower.includes("توصيل")) {
-    return isAr
-      ? "التوصيل متاح داخل كمبوند دار مصر الأندلس. التوصيل مجاني على معظم الطلبات! 🚚"
-      : "Delivery is available within Dar Misr Al-Andalus compound. Free delivery on most orders! 🚚";
+      ? `تقدر تتواصل مع المالك ${OWNER_NAME} مباشرة على ${OWNER_PHONE_DISPLAY}. ${WA_TOKEN} 📱`
+      : `You can reach the owner ${OWNER_NAME} directly at ${OWNER_PHONE_DISPLAY}. ${WA_TOKEN} 📱`;
   }
 
-  return isAr
-    ? "أهلاً! أنا مساعد جارك. ممكن أساعدك في الطلبات، البيع، أو أي سؤال تاني. اكتب سؤالك! 😊"
-    : "Hi there! I'm the Garak assistant. I can help you with orders, selling, or any other questions. Just ask! 😊";
+  // Ordering
+  if (lower.includes("order") || lower.includes("طلب") || lower.includes("اطلب") || lower.includes("checkout")) {
+    return (
+      (isAr
+        ? "عشان تطلب: تصفح المنتجات، ضيف اللي عايزه للسلة، وبعدين اضغط Checkout. هتدخل عنوانك جوه كمبوند دار مصر الأندلس والدفع كاش عند الاستلام. الطلب بيتسجل بشكل آمن من السيرفر مباشرة. 🛒"
+        : "To order: browse products, add to cart, then click Checkout. Enter your address inside Dar Misr Al-Andalus compound and pay cash on delivery. Orders are placed securely on the server. 🛒") +
+      ownerLine(lang)
+    );
+  }
+
+  // Becoming a seller
+  if (
+    lower.includes("seller") ||
+    lower.includes("sell") ||
+    lower.includes("merchant") ||
+    lower.includes("بائع") ||
+    lower.includes("بيع") ||
+    lower.includes("تاجر")
+  ) {
+    return (
+      (isAr
+        ? "عشان تبقى بائع: سجل حساب جديد واختار 'I want to sell products'، واملا بيانات نشاطك. هنراجع الطلب ونرد عليك. 🏪"
+        : "To become a seller: create an account, tick 'I want to sell products', and fill in your business details. We'll review your application and get back to you. 🏪") +
+      ownerLine(lang)
+    );
+  }
+
+  // Managing products (edit / pause / delete)
+  if (
+    lower.includes("edit") ||
+    lower.includes("price") ||
+    lower.includes("stock") ||
+    lower.includes("pause") ||
+    lower.includes("activate") ||
+    lower.includes("delete") ||
+    lower.includes("سعر") ||
+    lower.includes("مخزون") ||
+    lower.includes("ايقاف") ||
+    lower.includes("إيقاف") ||
+    lower.includes("تفعيل") ||
+    lower.includes("حذف") ||
+    lower.includes("منتج")
+  ) {
+    return (
+      (isAr
+        ? "من Merchant Dashboard تقدر: تعدّل السعر والمخزون، توقف المنتج مؤقتًا (Pause) من غير حذف، تفعّله تاني، أو تحذفه نهائيًا لو مفيش طلبات عليه. ✏️"
+        : "From your Merchant Dashboard you can: edit price and stock, pause a product (without deleting it), reactivate it, or delete it permanently if it has no past orders. ✏️") +
+      ownerLine(lang)
+    );
+  }
+
+  // Account / login / password / email
+  if (
+    lower.includes("account") ||
+    lower.includes("login") ||
+    lower.includes("sign in") ||
+    lower.includes("password") ||
+    lower.includes("email") ||
+    lower.includes("حساب") ||
+    lower.includes("تسجيل") ||
+    lower.includes("دخول") ||
+    lower.includes("كلمة السر") ||
+    lower.includes("ايميل") ||
+    lower.includes("إيميل")
+  ) {
+    return (
+      (isAr
+        ? "في صفحة تسجيل الدخول تقدر تظهر/تخفي كلمة السر بزرار العين 👁️، وعند إنشاء حساب جديد تقدر تضيف الإيميل (اختياري) عشان نبعتلك تحديثات الطلبات. 🔒"
+        : "On the login page you can show/hide your password with the eye icon 👁️, and when creating a new account you can add an email (optional) so we can send you order updates. 🔒") +
+      ownerLine(lang)
+    );
+  }
+
+  // Support / help / ticket
+  if (
+    lower.includes("support") ||
+    lower.includes("help") ||
+    lower.includes("ticket") ||
+    lower.includes("مساعدة") ||
+    lower.includes("دعم") ||
+    lower.includes("تذكرة")
+  ) {
+    return (
+      (isAr
+        ? "أنا هنا أساعدك! اكتب 'create ticket' أو 'تذكرة' وهسجلك تذكرة دعم لفريقنا. 💬"
+        : "I'm here to help! Type 'create ticket' and I'll open a support ticket for our team. 💬") + ownerLine(lang)
+    );
+  }
+
+  // Delivery
+  if (lower.includes("delivery") || lower.includes("توصيل") || lower.includes("شحن")) {
+    return (
+      (isAr
+        ? "التوصيل متاح داخل كمبوند دار مصر الأندلس فقط، والتوصيل مجاني على معظم الطلبات. 🚚"
+        : "Delivery is available only within Dar Misr Al-Andalus compound — free on most orders. 🚚") + ownerLine(lang)
+    );
+  }
+
+  // Default
+  return (
+    (isAr
+      ? "أهلاً! أنا مساعد جارك. ممكن أساعدك في الطلبات، البيع، إدارة منتجاتك، أو الحساب. اكتب سؤالك! 😊"
+      : "Hi there! I'm the Garak assistant. I can help you with orders, selling, managing your products, or your account. Just ask! 😊") +
+    ownerLine(lang)
+  );
+};
+
+// Safe renderer: only injects the WhatsApp <a> at the {{wa}} token. No HTML parsing.
+const renderMessage = (text: string, lang: "ar" | "en") => {
+  const linkLabel = lang === "ar" ? "كلّمنا على واتساب" : "Chat with us on WhatsApp";
+  const parts = text.split(WA_TOKEN);
+  return parts.map((part, i) => (
+    <span key={i}>
+      {part}
+      {i < parts.length - 1 && (
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline font-medium"
+        >
+          {linkLabel}
+        </a>
+      )}
+    </span>
+  ));
 };
 
 const ChatBot = () => {
@@ -76,45 +200,58 @@ const ChatBot = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    // Check if user wants to create a ticket
     const lower = text.toLowerCase();
     if ((lower.includes("create ticket") || lower.includes("تذكرة")) && !isSubmittingTicket) {
       setIsSubmittingTicket(true);
-      setMessages((prev) => [...prev, {
-        role: "bot",
-        text: lang === "ar"
-          ? "تمام! اكتب موضوع المشكلة وتفاصيلها وهبعتها لفريق الدعم."
-          : "Sure! Please describe your issue and I'll submit a support ticket for you."
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text:
+            lang === "ar"
+              ? "تمام! اكتب موضوع المشكلة وتفاصيلها وهبعتها لفريق الدعم."
+              : "Sure! Please describe your issue and I'll submit a support ticket for you.",
+        },
+      ]);
       return;
     }
 
     if (isSubmittingTicket && user) {
-      supabase.from("support_tickets").insert({
-        user_id: user.id,
-        subject: text.slice(0, 100),
-        message: text,
-      }).then(({ error }) => {
-        if (error) {
-          setMessages((prev) => [...prev, { role: "bot", text: "Sorry, couldn't create the ticket. Please try again." }]);
-        } else {
-          setMessages((prev) => [...prev, {
-            role: "bot",
-            text: lang === "ar"
-              ? "تم إنشاء تذكرة الدعم بنجاح! ✅ فريقنا هيتواصل معاك قريب."
-              : "Support ticket created successfully! ✅ Our team will reach out to you soon."
-          }]);
-          toast.success("Support ticket created");
-        }
-        setIsSubmittingTicket(false);
-      });
+      supabase
+        .from("support_tickets")
+        .insert({
+          user_id: user.id,
+          subject: text.slice(0, 100),
+          message: text,
+        })
+        .then(({ error }) => {
+          if (error) {
+            setMessages((prev) => [
+              ...prev,
+              { role: "bot", text: "Sorry, couldn't create the ticket. Please try again." },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "bot",
+                text:
+                  lang === "ar"
+                    ? `تم إنشاء تذكرة الدعم بنجاح! ✅ فريقنا هيتواصل معاك قريب. لو مستعجل تواصل مع ${OWNER_NAME} على ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`
+                    : `Support ticket created successfully! ✅ Our team will reach out soon. For urgent issues contact ${OWNER_NAME} at ${OWNER_PHONE_DISPLAY} — ${WA_TOKEN}.`,
+              },
+            ]);
+            toast.success("Support ticket created");
+          }
+          setIsSubmittingTicket(false);
+        });
       return;
     }
 
     setTimeout(() => {
       const response = getResponse(text, lang);
       setMessages((prev) => [...prev, { role: "bot", text: response }]);
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -129,7 +266,10 @@ const ChatBot = () => {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-border bg-card shadow-2xl flex flex-col" style={{ height: "480px" }}>
+        <div
+          className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-border bg-card shadow-2xl flex flex-col"
+          style={{ height: "520px" }}
+        >
           {/* Header */}
           <div className="rounded-t-2xl bg-primary p-4">
             <h3 className="font-bold text-primary-foreground">مساعد جارك • Garak Assistant</h3>
@@ -141,12 +281,19 @@ const ChatBot = () => {
             {messages.length === 0 && (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground text-center mb-4">
-                  أهلاً! كيف أقدر أساعدك؟<br />How can I help you?
+                  أهلاً! كيف أقدر أساعدك؟
+                  <br />
+                  How can I help you?
                 </p>
                 {quickActions.map((qa) => (
                   <button
                     key={qa.label}
-                    onClick={() => sendMessage(qa.text)}
+                    onClick={() => {
+                      if (qa.label.startsWith("📱")) {
+                        window.open(WHATSAPP_URL, "_blank", "noopener,noreferrer");
+                      }
+                      sendMessage(qa.text);
+                    }}
                     className="block w-full text-left rounded-lg border border-border p-2 text-sm text-foreground hover:bg-muted transition-colors"
                   >
                     {qa.label}
@@ -154,17 +301,25 @@ const ChatBot = () => {
                 ))}
               </div>
             )}
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted text-foreground rounded-bl-sm"
-                }`}>
-                  {msg.text}
+            {messages.map((msg, i) => {
+              const lang = detectLanguage(msg.text);
+              return (
+                <div
+                  key={i}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-muted text-foreground rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.role === "bot" ? renderMessage(msg.text, lang) : msg.text}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
 
