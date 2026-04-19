@@ -1,54 +1,39 @@
 
 
-The user wants a focused 4-part update: password toggle, optional email on register, ChatBot refresh + safe WhatsApp link. Let me check current state first.
+The user wants me to test the registration flow end-to-end in the browser. This is an explicit testing request, so browser tools are appropriate.
 
-Current state from files in context:
-- `Login.tsx` already has eye/eye-off toggle ✅
-- `Login.tsx` already has optional email field with validation + passes to signUp ✅
-- `AuthContext.signUp` already passes `contact_email` in metadata ✅
-- `profiles` table already has `email` column ✅
-- `handle_new_user` trigger already writes `NULLIF(NEW.raw_user_meta_data->>'contact_email', '')` to email ✅
-- ChatBot — need to verify content
+However, I'm in plan mode (READ-ONLY) and can use read-only browser tools. Testing requires `browser--act` which performs actions — that's allowed in plan mode for verification purposes since it doesn't modify the codebase.
 
-So items 1, 2, 3 are essentially already done. Only item 4 (ChatBot) needs real work, plus a UNIQUE constraint check on `profiles.email`.
+Actually, the constraint says "READ-ONLY mode. You CANNOT create, modify, or delete files". Browser actions don't modify files, but they do create test users in the database. Let me present a plan for testing instead.
 
-Let me verify:
-- profiles.email is nullable (✅ from schema), but is it UNIQUE? Schema doesn't show a unique constraint. Need to add `ALTER TABLE public.profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);` — but only if no duplicate nulls/values exist. Postgres allows multiple NULLs in UNIQUE so that's fine.
-- ChatBot — need to read it.
+Test scenarios:
+1. Navigate to /login, switch to Register mode
+2. Test invalid email on blur → expect inline error
+3. Test valid email registration → expect success
+4. Test duplicate email registration → expect "email already in use" error
 
-I'll plan around what's actually missing. No need to read ChatBot in detail — the requirements are explicit.
+## Test Plan
 
-## Plan
+### Setup
+- Navigate to `/login` (already there) and switch to **Create Account** mode.
 
-### 1. Login page — already done
-Eye toggle and optional email field already exist in `src/pages/Login.tsx`. Inline on-blur validation is currently submit-time only — switch to **on-blur** with inline error text under the email field. Keep submit-time validation as backup.
+### Test 1 — Invalid email on blur
+- Fill Full Name, Phone, Password, then type `not-an-email` in the Email field and tab away.
+- **Expect**: red border + inline text "Please enter a valid email address" under the field; submit button still active but blocked on submit.
 
-### 2. Database — add UNIQUE constraint
-Migration: `ALTER TABLE public.profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);`
-- Email column already exists, `handle_new_user` already persists it. Only the UNIQUE constraint is missing.
-- On register, after signUp, if a duplicate-email error surfaces from the trigger, surface the toast: *"This email is already in use"*.
+### Test 2 — Valid email registration
+- Use unique phone (e.g. `01099990001`) + email `test+v1@example.com` + password `test123`.
+- Submit.
+- **Expect**: success toast "Account created successfully!" and redirect to `/`.
 
-### 3. ChatBot refresh (`src/components/ChatBot.tsx`) — main work
-- **Safe WhatsApp renderer**: replace any string-based link injection with a `renderWithWa(text, lang)` helper that splits on `{{wa}}` and returns `ReactNode[]` with a real `<a>` element. No `dangerouslySetInnerHTML`.
-- **Bilingual responses refreshed** to cover:
-  - Ordering: COD, secure checkout, delivery limited to Dar Misr Al-Andalus.
-  - Selling: register as merchant, dashboard add/edit price & stock, pause/activate/delete.
-  - Account: show-password toggle + optional email on registration.
-- **Customer service** contact: number `01116895960` only, no personal name anywhere.
-- **WhatsApp link** with language-aware prefilled text:
-  - EN: `https://wa.me/201116895960?text=Hi%2C%20I%20need%20help%20with%20Garak`
-  - AR: `https://wa.me/201116895960?text=أهلاً%2C%20محتاج%20مساعدة%20في%20تطبيق%20جارك`
-  - All links: `target="_blank" rel="noopener noreferrer"`.
-- **Keyword triggers** `whatsapp / واتس / contact / تواصل` → reply with number + `{{wa}}` link.
-- **Quick action button**: "📱 Contact Customer Service on WhatsApp" / "تواصل مع خدمة العملاء على واتساب" opens WA URL in new tab.
-- **XSS guard**: never interpolate user input into bot strings — only static templates.
+### Test 3 — Duplicate email
+- Sign out, return to `/login` → Register.
+- Use a **different** phone (e.g. `01099990002`) but the **same** email `test+v1@example.com`.
+- Submit.
+- **Expect**: toast "This email is already in use" and inline error under the email field.
 
-### Files
-- **Migration**: add UNIQUE constraint on `profiles.email`.
-- **Edit**: `src/pages/Login.tsx` (move email validation to on-blur with inline error), `src/components/ChatBot.tsx` (safe WA renderer + refreshed copy + quick action).
+### Cleanup note
+Tests 2 and 3 create real auth users + profile rows. I will report the created phones/emails so you can delete them from the admin panel after.
 
-### Out of scope
-- Phone-based auth flow stays unchanged (`{phone}@garak.eg`).
-- RLS policies untouched.
-- Larger features from prior plans (notifications, slot caps, AR translations elsewhere) — not part of this request.
+### Files inspected, none modified.
 
