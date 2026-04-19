@@ -195,11 +195,11 @@ const ProductDetail = () => {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? "fill-warning text-warning" : "text-border"}`} />
+                  <Star key={i} className={`h-4 w-4 ${i < Math.round(avgRating) ? "fill-warning text-warning" : "text-border"}`} />
                 ))}
               </div>
-              <span className="text-sm font-medium text-foreground">{product.rating}</span>
-              <span className="text-sm text-muted-foreground">({product.reviews_count} reviews)</span>
+              <span className="text-sm font-medium text-foreground">{avgRating > 0 ? avgRating.toFixed(1) : "—"}</span>
+              <span className="text-sm text-muted-foreground">({reviews.length} reviews)</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -332,6 +332,71 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <section className="mt-16">
+          <h2 className="text-xl font-bold text-foreground mb-6">Reviews ({reviews.length})</h2>
+
+          {currentUserId ? (
+            <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+              <h3 className="font-semibold text-foreground">{userReview ? "Update your review" : "Write a review"}</h3>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setReviewRating(n)}
+                    className="p-0.5"
+                    aria-label={`${n} stars`}
+                  >
+                    <Star className={`h-6 w-6 ${n <= reviewRating ? "fill-warning text-warning" : "text-border"}`} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder={userReview?.comment || "Share your experience..."}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+              />
+              <div className="flex gap-2">
+                <Button onClick={submitReview} disabled={submittingReview}>
+                  {userReview ? "Update Review" : "Submit Review"}
+                </Button>
+                {userReview && (
+                  <Button variant="outline" className="text-destructive" onClick={() => deleteReview(userReview.id)}>
+                    Delete my review
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mb-6">
+              <Link to="/login" className="text-primary hover:underline">Log in</Link> to leave a review.
+            </p>
+          )}
+
+          {reviews.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No reviews yet — be the first!</p>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((r) => (
+                <div key={r.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-foreground">{r.reviewer}</p>
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-3.5 w-3.5 ${i < r.rating ? "fill-warning text-warning" : "text-border"}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                  {r.comment && <p className="text-sm text-foreground mt-1">{r.comment}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {relatedProducts.length > 0 && (
           <section className="mt-16">
