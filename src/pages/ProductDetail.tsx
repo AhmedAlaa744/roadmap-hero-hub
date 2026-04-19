@@ -106,11 +106,36 @@ const ProductDetail = () => {
           .in("id", relatedStoreIds);
         const storeMap = new Map((relStores || []).map((s: any) => [s.id, s.name_en]));
         setRelatedProducts((related || []).map((r: any) => toProduct({ ...r, stores: { name_en: storeMap.get(r.store_id) } })));
+        await fetchReviews(id!);
       }
       setLoading(false);
     };
     if (id) fetchProduct();
   }, [id]);
+
+  const submitReview = async () => {
+    if (!currentUserId) {
+      toast.error("Please log in to leave a review");
+      return;
+    }
+    setSubmittingReview(true);
+    const existing = reviews.find((r) => r.user_id === currentUserId);
+    const { error } = existing
+      ? await supabase.from("reviews").update({ rating: reviewRating, comment: reviewComment || null }).eq("id", existing.id)
+      : await supabase.from("reviews").insert({ product_id: id!, user_id: currentUserId, rating: reviewRating, comment: reviewComment || null });
+    setSubmittingReview(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(existing ? "Review updated" : "Review submitted");
+    setReviewComment("");
+    fetchReviews(id!);
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Review deleted");
+    fetchReviews(id!);
+  };
 
   if (loading) {
     return (
