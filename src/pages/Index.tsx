@@ -36,7 +36,7 @@ interface DbCategory {
 }
 
 const Index = () => {
-  const { user, isAdmin, isMerchant } = useAuth();
+  const { user, isAdmin, isMerchant, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<DbCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
@@ -84,7 +84,7 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              {!user && (
+              {!authLoading && !user && (
                 <Link to="/login">
                   <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
                     Log In
