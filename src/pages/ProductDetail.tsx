@@ -39,13 +39,40 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { addToCart } = useCart();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  const fetchReviews = async (productId: string) => {
+    const { data: revs } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
+    const userIds = [...new Set((revs || []).map((r: any) => r.user_id))];
+    let profMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles_public")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      profMap = new Map((profs || []).map((p: any) => [p.user_id, p.full_name || "Customer"]));
+    }
+    setReviews((revs || []).map((r: any) => ({ ...r, reviewer: profMap.get(r.user_id) || "Customer" })));
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
