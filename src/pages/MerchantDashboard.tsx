@@ -55,19 +55,41 @@ const MerchantDashboard = () => {
     setStore(storeData);
 
     if (storeData) {
-      const [{ data: prods }, { data: ords }, { data: cats }] = await Promise.all([
+      const [{ data: prods }, { data: ords }, { data: cats }, { data: limit }, { data: reqs }] = await Promise.all([
         supabase.from("products").select("*").eq("store_id", storeData.id).order("created_at", { ascending: false }),
         supabase.from("orders").select("*, order_items(*)").eq("store_id", storeData.id).order("created_at", { ascending: false }),
         supabase.from("categories").select("*").order("sort_order"),
+        supabase.rpc("merchant_active_slot_limit", { _store_id: storeData.id }),
+        supabase.from("slot_requests").select("*").eq("store_id", storeData.id).order("created_at", { ascending: false }),
       ]);
       setProducts(prods || []);
       setOrders(ords || []);
       setCategories(cats || []);
+      setSlotLimit(typeof limit === "number" ? limit : 20);
+      setSlotRequests(reqs || []);
     } else {
       const { data: cats } = await supabase.from("categories").select("*").order("sort_order");
       setCategories(cats || []);
     }
     setLoading(false);
+  };
+
+  const submitSlotRequest = async () => {
+    if (!store || !user) return;
+    const extra = parseInt(requestExtra);
+    if (isNaN(extra) || extra <= 0) { toast.error("Enter a valid number"); return; }
+    const { error } = await supabase.from("slot_requests").insert({
+      user_id: user.id,
+      store_id: store.id,
+      requested_extra: extra,
+      reason: requestReason || null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Request sent — admin will review it");
+    setShowRequestDialog(false);
+    setRequestReason("");
+    setRequestExtra("5");
+    fetchData();
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
