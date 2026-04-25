@@ -281,7 +281,7 @@ const MerchantDashboard = () => {
   const pendingSlotRequest = slotRequests.find((r) => r.status === "pending");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <Header />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-foreground mb-2">{store.name_en}</h1>
