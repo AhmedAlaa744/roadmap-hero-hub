@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X, Eye, EyeOff, RefreshCw, Send } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, Star, Plus, Trash2, CheckCircle, XCircle, Pencil, Check, X, Eye, EyeOff, RefreshCw, Send, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -14,7 +15,11 @@ import { suggestCategoryName } from "@/lib/categorize";
 
 const MerchantDashboard = () => {
   const { user, loading: authLoading } = useAuth();
+  const { t, dir } = useLanguage();
   const navigate = useNavigate();
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waPhone, setWaPhone] = useState("");
+  const [storePhone, setStorePhone] = useState("");
   const [store, setStore] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -54,6 +59,11 @@ const MerchantDashboard = () => {
       .eq("owner_id", user!.id)
       .single();
     setStore(storeData);
+    if (storeData) {
+      setStorePhone(storeData.phone || "");
+      setWaEnabled(!!storeData.whatsapp_enabled);
+      setWaPhone(storeData.whatsapp_phone || "");
+    }
 
     if (storeData) {
       const [{ data: prods }, { data: ords }, { data: cats }, { data: limit }, { data: reqs }] = await Promise.all([
@@ -227,9 +237,27 @@ const MerchantDashboard = () => {
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
+    // Optimistic update so the select reflects the change immediately
+    const prev = orders;
+    setOrders((curr) => curr.map((o) => (o.id === id ? { ...o, status } : o)));
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success(`Order ${status}`); fetchData(); }
+    if (error) {
+      setOrders(prev); // revert
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Order ${status.replace(/_/g, " ")}`);
+  };
+
+  const saveStoreContact = async (whatsapp_enabled: boolean, whatsapp_phone: string, phone: string) => {
+    if (!store) return;
+    const { error } = await supabase
+      .from("stores")
+      .update({ phone: phone || null, whatsapp_enabled, whatsapp_phone: whatsapp_phone || null })
+      .eq("id", store.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Store contact info saved");
+    setStore({ ...store, phone, whatsapp_enabled, whatsapp_phone });
   };
 
   if (authLoading || loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Loading...</div></div>;
@@ -253,11 +281,38 @@ const MerchantDashboard = () => {
   const pendingSlotRequest = slotRequests.find((r) => r.status === "pending");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <Header />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-foreground mb-2">{store.name_en}</h1>
-        <p className="text-sm text-muted-foreground mb-8">Merchant Dashboard</p>
+        <p className="text-sm text-muted-foreground mb-8">{t("Merchant Dashboard", "لوحة التاجر")}</p>
+
+        {/* Store contact card */}
+        <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            {t("Store Contact", "بيانات تواصل المتجر")}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground">{t("Phone", "الهاتف")} *</label>
+              <Input value={storePhone} onChange={(e) => setStorePhone(e.target.value)} placeholder="01xxxxxxxxx" className="mt-1" />
+            </div>
+            <div className="flex items-center gap-2 pt-5">
+              <input type="checkbox" id="wa-enabled" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} />
+              <label htmlFor="wa-enabled" className="text-sm text-foreground">{t("WhatsApp available", "واتساب متاح")}</label>
+            </div>
+            {waEnabled && (
+              <div>
+                <label className="text-xs font-medium text-foreground">{t("WhatsApp number", "رقم واتساب")}</label>
+                <Input value={waPhone} onChange={(e) => setWaPhone(e.target.value)} placeholder={storePhone || "01xxxxxxxxx"} className="mt-1" />
+              </div>
+            )}
+          </div>
+          <Button size="sm" onClick={() => saveStoreContact(waEnabled, waPhone, storePhone)}>
+            {t("Save Contact Info", "حفظ بيانات التواصل")}
+          </Button>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -504,18 +559,18 @@ const MerchantDashboard = () => {
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <label className="text-xs text-muted-foreground">Set status:</label>
+                    <label className="text-xs text-muted-foreground">{t("Set status:", "تعيين الحالة:")}</label>
                     <select
                       value={o.status}
                       onChange={(e) => updateOrderStatus(o.id, e.target.value)}
                       className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium"
                     >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="preparing">Preparing</option>
-                      <option value="out_for_delivery">Out for Delivery</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="pending">{t("Pending", "قيد الانتظار")}</option>
+                      <option value="confirmed">{t("Confirmed", "مؤكد")}</option>
+                      <option value="preparing">{t("Preparing", "قيد التجهيز")}</option>
+                      <option value="out_for_delivery">{t("Out for Delivery", "في الطريق إليك")}</option>
+                      <option value="delivered">{t("Delivered", "تم التوصيل")}</option>
+                      <option value="cancelled">{t("Cancelled", "ملغي")}</option>
                     </select>
                   </div>
                 </div>

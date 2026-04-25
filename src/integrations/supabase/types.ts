@@ -408,6 +408,8 @@ export type Database = {
           owner_id: string
           phone: string | null
           updated_at: string
+          whatsapp_enabled: boolean
+          whatsapp_phone: string | null
         }
         Insert: {
           created_at?: string
@@ -421,6 +423,8 @@ export type Database = {
           owner_id: string
           phone?: string | null
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_phone?: string | null
         }
         Update: {
           created_at?: string
@@ -434,6 +438,8 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_phone?: string | null
         }
         Relationships: []
       }
