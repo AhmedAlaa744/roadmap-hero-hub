@@ -559,18 +559,18 @@ const MerchantDashboard = () => {
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <label className="text-xs text-muted-foreground">Set status:</label>
+                    <label className="text-xs text-muted-foreground">{t("Set status:", "تعيين الحالة:")}</label>
                     <select
                       value={o.status}
                       onChange={(e) => updateOrderStatus(o.id, e.target.value)}
                       className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium"
                     >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="preparing">Preparing</option>
-                      <option value="out_for_delivery">Out for Delivery</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="pending">{t("Pending", "قيد الانتظار")}</option>
+                      <option value="confirmed">{t("Confirmed", "مؤكد")}</option>
+                      <option value="preparing">{t("Preparing", "قيد التجهيز")}</option>
+                      <option value="out_for_delivery">{t("Out for Delivery", "في الطريق إليك")}</option>
+                      <option value="delivered">{t("Delivered", "تم التوصيل")}</option>
+                      <option value="cancelled">{t("Cancelled", "ملغي")}</option>
                     </select>
                   </div>
                 </div>
