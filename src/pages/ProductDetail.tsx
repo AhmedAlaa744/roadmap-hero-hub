@@ -57,6 +57,7 @@ const ProductDetail = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isVerifiedBuyer, setIsVerifiedBuyer] = useState(false);
   const { addToCart } = useCart();
+  const { t, dir, lang } = useLanguage();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
