@@ -59,6 +59,11 @@ const MerchantDashboard = () => {
       .eq("owner_id", user!.id)
       .single();
     setStore(storeData);
+    if (storeData) {
+      setStorePhone(storeData.phone || "");
+      setWaEnabled(!!storeData.whatsapp_enabled);
+      setWaPhone(storeData.whatsapp_phone || "");
+    }
 
     if (storeData) {
       const [{ data: prods }, { data: ords }, { data: cats }, { data: limit }, { data: reqs }] = await Promise.all([
