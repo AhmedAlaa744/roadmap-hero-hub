@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Package, Heart, LogOut, Store, Shield } from "lucide-react";
+import { Package, Heart, LogOut, Store, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const Account = () => {
   const { user, profile, roles, signOut, isAdmin, loading } = useAuth();
+  const { t, dir } = useLanguage();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
 
@@ -31,8 +33,21 @@ const Account = () => {
 
   const initial = profile?.full_name?.charAt(0)?.toUpperCase() || "U";
 
+  const statusLabel = (s: string) => {
+    const map: Record<string, [string, string]> = {
+      pending: ["pending", "قيد الانتظار"],
+      confirmed: ["confirmed", "مؤكد"],
+      preparing: ["preparing", "قيد التجهيز"],
+      out_for_delivery: ["out for delivery", "في الطريق إليك"],
+      delivered: ["delivered", "تم التوصيل"],
+      cancelled: ["cancelled", "ملغي"],
+    };
+    const [en, ar] = map[s] || [s.replace(/_/g, " "), s];
+    return t(en, ar);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <Header />
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Profile card */}
@@ -41,7 +56,7 @@ const Account = () => {
             {initial}
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground">{profile?.full_name || "User"}</h1>
+            <h1 className="text-xl font-bold text-foreground">{profile?.full_name || t("User", "مستخدم")}</h1>
             <p className="text-sm text-muted-foreground">{profile?.phone}</p>
             <div className="flex gap-2 mt-1">
               {roles.map((r) => (
@@ -55,33 +70,33 @@ const Account = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <Link to="/browse" className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:border-primary transition-colors">
             <Package className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium text-foreground">Browse</span>
+            <span className="text-xs font-medium text-foreground">{t("Browse", "تصفح")}</span>
           </Link>
           <Link to="/account" className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:border-primary transition-colors">
             <Heart className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium text-foreground">Wishlist</span>
+            <span className="text-xs font-medium text-foreground">{t("Wishlist", "المفضلة")}</span>
           </Link>
           {roles.includes("moderator") && (
             <Link to="/merchant/dashboard" className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:border-primary transition-colors">
               <Store className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium text-foreground">My Store</span>
+              <span className="text-xs font-medium text-foreground">{t("My Store", "متجري")}</span>
             </Link>
           )}
           {isAdmin && (
             <Link to="/admin" className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:border-primary transition-colors">
               <Shield className="h-5 w-5 text-accent" />
-              <span className="text-xs font-medium text-foreground">Admin</span>
+              <span className="text-xs font-medium text-foreground">{t("Admin", "الإدارة")}</span>
             </Link>
           )}
         </div>
 
         {/* Orders */}
-        <h2 className="text-lg font-bold text-foreground mb-4">My Orders</h2>
+        <h2 className="text-lg font-bold text-foreground mb-4">{t("My Orders", "طلباتي")}</h2>
         {orders.length === 0 ? (
           <div className="text-center py-12 rounded-xl border border-border bg-card">
             <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No orders yet</p>
-            <Link to="/browse" className="text-primary text-sm font-medium hover:underline mt-2 inline-block">Start shopping</Link>
+            <p className="text-muted-foreground">{t("No orders yet", "لا توجد طلبات بعد")}</p>
+            <Link to="/browse" className="text-primary text-sm font-medium hover:underline mt-2 inline-block">{t("Start shopping", "ابدأ التسوق")}</Link>
           </div>
         ) : (
           <div className="space-y-3">
@@ -102,18 +117,18 @@ const Account = () => {
                     order.status === "cancelled" ? "bg-destructive/10 text-destructive" :
                     "bg-warning/10 text-warning"
                   }`}>
-                    {order.status.replace(/_/g, " ")}
+                    {statusLabel(order.status)}
                   </span>
                 </div>
                 <p className="text-primary font-bold mt-2">EGP {Number(order.total).toLocaleString()}</p>
-                <p className="text-xs text-primary mt-1">Track order →</p>
+                <p className="text-xs text-primary mt-1">{t("Track order →", "تتبع الطلب →")}</p>
               </Link>
             ))}
           </div>
         )}
 
         <Button variant="outline" className="w-full mt-8 text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => { signOut(); navigate("/"); }}>
-          <LogOut className="h-4 w-4 mr-2" /> Sign Out
+          <LogOut className="h-4 w-4 mr-2" /> {t("Sign Out", "تسجيل الخروج")}
         </Button>
       </div>
       <Footer />
