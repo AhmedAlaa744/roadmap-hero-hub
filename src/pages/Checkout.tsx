@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,6 +14,7 @@ import { CheckCircle } from "lucide-react";
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
+  const { t, dir, lang } = useLanguage();
   const navigate = useNavigate();
   const [building, setBuilding] = useState("");
   const [floor, setFloor] = useState("");
@@ -24,11 +26,11 @@ const Checkout = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" dir={dir}>
         <Header />
         <div className="container mx-auto px-4 py-20 text-center">
-          <p className="text-lg text-muted-foreground mb-4">Please sign in to checkout</p>
-          <Link to="/login"><Button>Sign In</Button></Link>
+          <p className="text-lg text-muted-foreground mb-4">{t("Please sign in to checkout", "الرجاء تسجيل الدخول لإتمام الطلب")}</p>
+          <Link to="/login"><Button>{t("Sign In", "تسجيل الدخول")}</Button></Link>
         </div>
         <Footer />
       </div>
@@ -37,17 +39,17 @@ const Checkout = () => {
 
   if (orderNumber) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" dir={dir}>
         <Header />
         <div className="container mx-auto px-4 py-20 text-center max-w-md">
           <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-foreground">Order Placed!</h1>
-          <p className="text-muted-foreground mt-2">Your order number is</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("Order Placed!", "تم تقديم الطلب!")}</h1>
+          <p className="text-muted-foreground mt-2">{t("Your order number is", "رقم طلبك هو")}</p>
           <p className="text-2xl font-bold text-primary mt-2">{orderNumber}</p>
-          <p className="text-sm text-muted-foreground mt-4">You'll receive updates on your order status.</p>
+          <p className="text-sm text-muted-foreground mt-4">{t("You'll receive updates on your order status.", "ستتلقى تحديثات حول حالة طلبك.")}</p>
           <div className="flex gap-3 justify-center mt-8">
-            <Link to="/account"><Button variant="outline">My Orders</Button></Link>
-            <Link to="/browse"><Button>Continue Shopping</Button></Link>
+            <Link to="/account"><Button variant="outline">{t("My Orders", "طلباتي")}</Button></Link>
+            <Link to="/browse"><Button>{t("Continue Shopping", "متابعة التسوق")}</Button></Link>
           </div>
         </div>
         <Footer />
@@ -57,11 +59,11 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (!building.trim()) {
-      toast.error("Building number is required");
+      toast.error(t("Building number is required", "رقم المبنى مطلوب"));
       return;
     }
     if (items.length === 0) {
-      toast.error("Your cart is empty");
+      toast.error(t("Your cart is empty", "سلتك فارغة"));
       return;
     }
     setLoading(true);
@@ -82,75 +84,77 @@ const Checkout = () => {
 
       clearCart();
       setOrderNumber(data.order_number);
-      toast.success("Order placed successfully!");
+      toast.success(t("Order placed successfully!", "تم تقديم الطلب بنجاح!"));
     } catch (err: any) {
-      toast.error(err.message || "Failed to place order");
+      toast.error(err.message || t("Failed to place order", "فشل في تقديم الطلب"));
     } finally {
       setLoading(false);
     }
   };
 
+  const productName = (p: any) => (lang === "ar" && p.name_ar ? p.name_ar : p.name_en);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <Header />
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="text-2xl font-bold text-foreground mb-8">Checkout</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-8">{t("Checkout", "الدفع")}</h1>
 
         <div className="space-y-6">
           {/* Delivery address */}
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <h2 className="font-bold text-foreground">Delivery Address</h2>
-            <p className="text-xs text-muted-foreground">Dar Misr Al-Andalus compound</p>
+            <h2 className="font-bold text-foreground">{t("Delivery Address", "عنوان التوصيل")}</h2>
+            <p className="text-xs text-muted-foreground">{t("Dar Misr Al-Andalus compound", "كمبوند دار مصر الأندلس")}</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-sm font-medium text-foreground">Building *</label>
-                <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="e.g. B12" required className="mt-1" />
+                <label className="text-sm font-medium text-foreground">{t("Building", "المبنى")} *</label>
+                <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder={t("e.g. B12", "مثال: B12")} required className="mt-1" />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground">Floor</label>
-                <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="e.g. 3" className="mt-1" />
+                <label className="text-sm font-medium text-foreground">{t("Floor", "الطابق")}</label>
+                <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder={t("e.g. 3", "مثال: 3")} className="mt-1" />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground">Apartment</label>
-                <Input value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder="e.g. 5" className="mt-1" />
+                <label className="text-sm font-medium text-foreground">{t("Apartment", "الشقة")}</label>
+                <Input value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder={t("e.g. 5", "مثال: 5")} className="mt-1" />
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Notes (optional)</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="Any special instructions..." />
+              <label className="text-sm font-medium text-foreground">{t("Notes (optional)", "ملاحظات (اختياري)")}</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" placeholder={t("Any special instructions...", "أي تعليمات خاصة...")} />
             </div>
           </div>
 
           {/* Payment */}
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <h2 className="font-bold text-foreground">Payment Method</h2>
+            <h2 className="font-bold text-foreground">{t("Payment Method", "طريقة الدفع")}</h2>
             <div className="flex gap-3">
               <button onClick={() => setPaymentMethod("cod")} className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${paymentMethod === "cod" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}>
-                💵 Cash on Delivery
+                💵 {t("Cash on Delivery", "الدفع عند الاستلام")}
               </button>
               <button onClick={() => setPaymentMethod("online")} className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${paymentMethod === "online" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}>
-                💳 Online Payment
+                💳 {t("Online Payment", "الدفع الإلكتروني")}
               </button>
             </div>
           </div>
 
           {/* Summary */}
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <h2 className="font-bold text-foreground">Order Summary</h2>
+            <h2 className="font-bold text-foreground">{t("Order Summary", "ملخص الطلب")}</h2>
             {items.map((item) => (
               <div key={item.product.id} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{item.product.name_en} × {item.quantity}</span>
+                <span className="text-muted-foreground">{productName(item.product)} × {item.quantity}</span>
                 <span className="font-medium text-foreground">EGP {(item.product.price * item.quantity).toLocaleString()}</span>
               </div>
             ))}
             <div className="border-t border-border pt-3 flex justify-between font-bold text-foreground">
-              <span>Total</span>
+              <span>{t("Total", "الإجمالي")}</span>
               <span className="text-primary text-xl">EGP {subtotal.toLocaleString()}</span>
             </div>
           </div>
 
           <Button onClick={handlePlaceOrder} disabled={loading} className="w-full bg-primary text-primary-foreground font-semibold" size="lg">
-            {loading ? "Placing Order..." : "Place Order"}
+            {loading ? t("Placing Order...", "جاري تقديم الطلب...") : t("Place Order", "تأكيد الطلب")}
           </Button>
         </div>
       </div>
