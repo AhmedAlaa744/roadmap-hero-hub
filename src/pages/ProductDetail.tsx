@@ -365,12 +365,12 @@ const ProductDetail = () => {
 
         {/* Reviews Section */}
         <section className="mt-16">
-          <h2 className="text-xl font-bold text-foreground mb-6">Reviews ({reviews.length})</h2>
+          <h2 className="text-xl font-bold text-foreground mb-6">{t("Reviews", "المراجعات")} ({reviews.length})</h2>
 
           {currentUserId ? (
             isVerifiedBuyer || userReview ? (
               <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
-                <h3 className="font-semibold text-foreground">{userReview ? "Update your review" : "Write a review"}</h3>
+                <h3 className="font-semibold text-foreground">{userReview ? t("Update your review", "حدّث مراجعتك") : t("Write a review", "اكتب مراجعة")}</h3>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
@@ -387,16 +387,16 @@ const ProductDetail = () => {
                 <textarea
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder={userReview?.comment || "Share your experience..."}
+                  placeholder={userReview?.comment || t("Share your experience...", "شاركنا تجربتك...")}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
                 />
                 <div className="flex gap-2">
                   <Button onClick={submitReview} disabled={submittingReview}>
-                    {userReview ? "Update Review" : "Submit Review"}
+                    {userReview ? t("Update Review", "تحديث المراجعة") : t("Submit Review", "إرسال المراجعة")}
                   </Button>
                   {userReview && (
                     <Button variant="outline" className="text-destructive" onClick={() => deleteReview(userReview.id)}>
-                      Delete my review
+                      {t("Delete my review", "حذف مراجعتي")}
                     </Button>
                   )}
                 </div>
@@ -404,18 +404,21 @@ const ProductDetail = () => {
             ) : (
               <div className="rounded-xl border border-border bg-muted/30 p-4 mb-6">
                 <p className="text-sm text-muted-foreground">
-                  ⭐ Only verified buyers can review this product. Place an order and once it's marked as <strong>delivered</strong>, you'll be able to leave a review.
+                  ⭐ {t(
+                    "Only verified buyers can review this product. Place an order and once it's marked as delivered, you'll be able to leave a review.",
+                    "يمكن للمشترين المُتحقَّق منهم فقط مراجعة هذا المنتج. اطلب المنتج، وبمجرد أن يصبح حالته «تم التوصيل» ستتمكن من ترك مراجعة."
+                  )}
                 </p>
               </div>
             )
           ) : (
             <p className="text-sm text-muted-foreground mb-6">
-              <Link to="/login" className="text-primary hover:underline">Log in</Link> to leave a review.
+              <Link to="/login" className="text-primary hover:underline">{t("Log in", "سجّل الدخول")}</Link> {t("to leave a review.", "لكتابة مراجعة.")}
             </p>
           )}
 
           {reviews.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No reviews yet — be the first!</p>
+            <p className="text-center text-muted-foreground py-8">{t("No reviews yet — be the first!", "لا توجد مراجعات بعد — كن الأول!")}</p>
           ) : (
             <div className="space-y-3">
               {reviews.map((r) => (
@@ -438,7 +441,7 @@ const ProductDetail = () => {
 
         {relatedProducts.length > 0 && (
           <section className="mt-16">
-            <h2 className="text-xl font-bold text-foreground mb-6">Related Products</h2>
+            <h2 className="text-xl font-bold text-foreground mb-6">{t("Related Products", "منتجات ذات صلة")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
