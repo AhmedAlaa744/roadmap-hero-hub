@@ -15,7 +15,7 @@ import { suggestCategoryName } from "@/lib/categorize";
 
 const MerchantDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
   const navigate = useNavigate();
   const [waEnabled, setWaEnabled] = useState(false);
   const [waPhone, setWaPhone] = useState("");
