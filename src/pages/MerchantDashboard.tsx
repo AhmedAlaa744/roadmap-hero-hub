@@ -319,52 +319,54 @@ const MerchantDashboard = () => {
           <div className="rounded-xl border border-border bg-card p-4">
             <Package className="h-5 w-5 text-primary mb-2" />
             <p className="text-2xl font-bold text-foreground">{activeCount}</p>
-            <p className="text-xs text-muted-foreground">Active Products</p>
+            <p className="text-xs text-muted-foreground">{t("Active Products", "المنتجات النشطة")}</p>
             <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (activeCount / slotLimit) * 100)}%` }} />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} slots</p>
+              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} {t("slots", "خانة")}</p>
               <button onClick={() => setShowRequestDialog(true)} className="text-xs text-primary hover:underline font-medium">
-                Request more
+                {t("Request more", "اطلب المزيد")}
               </button>
             </div>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <ShoppingCart className="h-5 w-5 text-accent mb-2" />
             <p className="text-2xl font-bold text-foreground">{orders.length}</p>
-            <p className="text-xs text-muted-foreground">Orders</p>
+            <p className="text-xs text-muted-foreground">{t("Orders", "الطلبات")}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <DollarSign className="h-5 w-5 text-success mb-2" />
             <p className="text-2xl font-bold text-foreground">EGP {totalRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Revenue</p>
+            <p className="text-xs text-muted-foreground">{t("Revenue", "الإيرادات")}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <Star className="h-5 w-5 text-warning mb-2" />
             <p className="text-2xl font-bold text-foreground">—</p>
-            <p className="text-xs text-muted-foreground">Rating</p>
+            <p className="text-xs text-muted-foreground">{t("Rating", "التقييم")}</p>
           </div>
         </div>
 
         <Tabs defaultValue="products">
           <TabsList>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="products">{t("Products", "المنتجات")}</TabsTrigger>
+            <TabsTrigger value="orders">{t("Orders", "الطلبات")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="mt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-foreground">My Products</h2>
-              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? "Slot limit reached — request more or replace a product" : ""}>
-                <Plus className="h-4 w-4 mr-1" /> Add Product
+              <h2 className="font-semibold text-foreground">{t("My Products", "منتجاتي")}</h2>
+              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? t("Slot limit reached — request more or replace a product", "تم الوصول إلى حد الخانات — اطلب المزيد أو استبدل منتجًا") : ""}>
+                <Plus className="h-4 w-4 mr-1" /> {t("Add Product", "إضافة منتج")}
               </Button>
             </div>
             {atSlotLimit && (
               <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 mb-4 text-xs text-foreground">
-                You've reached your {slotLimit}-product limit. Use <strong>Replace</strong> on an existing item, or{" "}
-                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>request more slots</button>.
-                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">(A request for +{pendingSlotRequest.requested_extra} is pending review.)</span>}
+                {t(`You've reached your ${slotLimit}-product limit. Use`, `لقد وصلت إلى حد ${slotLimit} منتج. استخدم`)}{" "}
+                <strong>{t("Replace", "استبدال")}</strong>{" "}
+                {t("on an existing item, or", "لمنتج موجود، أو")}{" "}
+                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>{t("request more slots", "اطلب خانات إضافية")}</button>.
+                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">({t(`A request for +${pendingSlotRequest.requested_extra} is pending review.`, `طلب +${pendingSlotRequest.requested_extra} قيد المراجعة.`)})</span>}
               </div>
             )}
 
