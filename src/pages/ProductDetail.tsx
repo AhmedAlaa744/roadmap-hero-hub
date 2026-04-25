@@ -167,9 +167,9 @@ const ProductDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" dir={dir}>
         <Header />
-        <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Loading...</div>
+        <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">{t("Loading...", "جاري التحميل...")}</div>
         <Footer />
       </div>
     );
@@ -177,11 +177,11 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" dir={dir}>
         <Header />
         <div className="container mx-auto px-4 py-20 text-center">
-          <p className="text-xl text-muted-foreground">Product not found</p>
-          <Link to="/browse" className="text-primary font-medium hover:underline mt-4 inline-block">← Back to browse</Link>
+          <p className="text-xl text-muted-foreground">{t("Product not found", "المنتج غير موجود")}</p>
+          <Link to="/browse" className="text-primary font-medium hover:underline mt-4 inline-block">{t("← Back to browse", "→ العودة للتصفح")}</Link>
         </div>
         <Footer />
       </div>
@@ -191,23 +191,25 @@ const ProductDetail = () => {
   const isUsed = product.condition === "used";
   const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length : 0;
   const userReview = reviews.find((r) => r.user_id === currentUserId);
+  const displayName = lang === "ar" && product.name_ar ? product.name_ar : product.name_en;
+  const displayDescription = lang === "ar" && product.description_ar ? product.description_ar : product.description_en;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-primary">Home</Link>
+          <Link to="/" className="hover:text-primary">{t("Home", "الرئيسية")}</Link>
           <span>/</span>
-          <Link to="/browse" className="hover:text-primary">Browse</Link>
+          <Link to="/browse" className="hover:text-primary">{t("Browse", "تصفح")}</Link>
           <span>/</span>
-          <span className="text-foreground font-medium line-clamp-1">{product.name_en}</span>
+          <span className="text-foreground font-medium line-clamp-1">{displayName}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-4">
             <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border">
-              <img src={product.images[0]} alt={product.name_en} className="h-full w-full object-cover" />
+              <img src={product.images[0]} alt={displayName} className="h-full w-full object-cover" />
             </div>
           </div>
 
@@ -216,8 +218,9 @@ const ProductDetail = () => {
               <Link to={`/store/${product.store_id}`} className="text-sm text-primary font-medium hover:underline">
                 {product.store_name}
               </Link>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-1">{product.name_en}</h1>
-              {product.name_ar && <p className="text-lg text-muted-foreground mt-1">{product.name_ar}</p>}
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-1">{displayName}</h1>
+              {lang === "en" && product.name_ar && <p className="text-lg text-muted-foreground mt-1" dir="rtl">{product.name_ar}</p>}
+              {lang === "ar" && product.name_en && <p className="text-lg text-muted-foreground mt-1" dir="ltr">{product.name_en}</p>}
             </div>
 
             <div className="flex items-center gap-2">
@@ -227,21 +230,21 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm font-medium text-foreground">{avgRating > 0 ? avgRating.toFixed(1) : "—"}</span>
-              <span className="text-sm text-muted-foreground">({reviews.length} reviews)</span>
+              <span className="text-sm text-muted-foreground">({reviews.length} {t("reviews", "مراجعات")})</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${conditionStyles[product.condition]}`}>
-                {conditionLabels[product.condition]}
+                {t(conditionLabels[product.condition][0], conditionLabels[product.condition][1])}
               </span>
               {product.pricing_model !== "fixed" && (
                 <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-                  {product.pricing_model === "negotiable" ? "Price Negotiable" : "Auction"}
+                  {product.pricing_model === "negotiable" ? t("Price Negotiable", "السعر قابل للتفاوض") : t("Auction", "مزاد")}
                 </span>
               )}
               {product.in_stock && (
                 <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-sm font-semibold text-success">
-                  In Stock
+                  {t("In Stock", "متوفر")}
                 </span>
               )}
             </div>
@@ -249,7 +252,7 @@ const ProductDetail = () => {
             <div className="bg-mint/50 rounded-xl p-5">
               <p className="text-3xl font-extrabold text-primary">EGP {product.price.toLocaleString()}</p>
               {product.pricing_model === "negotiable" && (
-                <p className="text-sm text-muted-foreground mt-1">💬 Make an offer — the seller is open to negotiation</p>
+                <p className="text-sm text-muted-foreground mt-1">💬 {t("Make an offer — the seller is open to negotiation", "قدّم عرضك — البائع مستعد للتفاوض")}</p>
               )}
             </div>
 
@@ -257,12 +260,12 @@ const ProductDetail = () => {
             <div className="flex gap-3">
               {isUsed ? (
                 <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold" onClick={() => setShowOfferForm(true)}>
-                  <MessageCircle className="h-4 w-4 mr-2" /> Offer Price
+                  <MessageCircle className="h-4 w-4 mr-2" /> {t("Offer Price", "عرض سعر")}
                 </Button>
               ) : product.pricing_model === "fixed" ? (
                 product.stock === 0 ? (
                   <span className="flex-1 inline-flex items-center justify-center rounded-md border border-destructive/30 bg-destructive/10 text-destructive font-semibold py-2">
-                    Out of Stock
+                    {t("Out of Stock", "غير متوفر")}
                   </span>
                 ) : (
                   <>
@@ -281,35 +284,35 @@ const ProductDetail = () => {
                         >+</button>
                       </div>
                       {product.stock <= 5 && (
-                        <span className="text-xs font-medium text-warning">Only {product.stock} left</span>
+                        <span className="text-xs font-medium text-warning">{t(`Only ${product.stock} left`, `${product.stock} متبقي فقط`)}</span>
                       )}
                     </div>
                     <Button
                       className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                       onClick={() => {
                         const qty = Math.min(quantity, product.stock);
-                        if (qty < quantity) toast.warning(`Only ${product.stock} available — quantity adjusted.`);
+                        if (qty < quantity) toast.warning(t(`Only ${product.stock} available — quantity adjusted.`, `${product.stock} متاح فقط — تم تعديل الكمية.`));
                         addToCart(product, qty);
-                        toast.success("Added to cart!");
+                        toast.success(t("Added to cart!", "تمت الإضافة إلى السلة!"));
                       }}
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+                      <ShoppingCart className="h-4 w-4 mr-2" /> {t("Add to Cart", "أضف إلى السلة")}
                     </Button>
                   </>
                 )
               ) : product.pricing_model === "negotiable" ? (
                 <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" onClick={() => setShowOfferForm(true)}>
-                  <MessageCircle className="h-4 w-4 mr-2" /> Make an Offer
+                  <MessageCircle className="h-4 w-4 mr-2" /> {t("Make an Offer", "قدّم عرضًا")}
                 </Button>
               ) : (
                 <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
-                  Place Bid
+                  {t("Place Bid", "قدّم مزايدة")}
                 </Button>
               )}
-              <Button variant="outline" size="icon" onClick={() => setIsFavorite(!isFavorite)} className={isFavorite ? "text-destructive border-destructive/30" : ""}>
+              <Button variant="outline" size="icon" onClick={() => setIsFavorite(!isFavorite)} className={isFavorite ? "text-destructive border-destructive/30" : ""} aria-label={t("Favorite", "المفضلة")}>
                 <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
               </Button>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" aria-label={t("Share", "مشاركة")}>
                 <Share2 className="h-4 w-4" />
               </Button>
             </div>
@@ -317,46 +320,45 @@ const ProductDetail = () => {
             {/* Offer Form */}
             {showOfferForm && (
               <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-                <h3 className="font-semibold text-foreground">Make an Offer</h3>
+                <h3 className="font-semibold text-foreground">{t("Make an Offer", "قدّم عرضًا")}</h3>
                 <div>
-                  <label className="text-sm font-medium text-foreground">Your Offer (EGP)</label>
-                  <input type="number" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} placeholder="Enter your price" className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                  <label className="text-sm font-medium text-foreground">{t("Your Offer (EGP)", "عرضك (جنيه مصري)")}</label>
+                  <input type="number" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} placeholder={t("Enter your price", "أدخل سعرك")} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground">Message (optional)</label>
-                  <textarea value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)} placeholder="Any details for the seller..." className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" />
+                  <label className="text-sm font-medium text-foreground">{t("Message (optional)", "رسالة (اختياري)")}</label>
+                  <textarea value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)} placeholder={t("Any details for the seller...", "أي تفاصيل للبائع...")} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" />
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => { toast.success("Offer sent to seller!"); setShowOfferForm(false); setOfferPrice(""); setOfferMessage(""); }} className="bg-primary text-primary-foreground">
-                    Send Offer
+                  <Button onClick={() => { toast.success(t("Offer sent to seller!", "تم إرسال العرض إلى البائع!")); setShowOfferForm(false); setOfferPrice(""); setOfferMessage(""); }} className="bg-primary text-primary-foreground">
+                    {t("Send Offer", "إرسال العرض")}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowOfferForm(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setShowOfferForm(false)}>{t("Cancel", "إلغاء")}</Button>
                 </div>
               </div>
             )}
 
             {/* Contact */}
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="text-sm"><MessageCircle className="h-4 w-4 mr-1" /> Chat</Button>
+              <Button variant="outline" size="sm" className="text-sm"><MessageCircle className="h-4 w-4 mr-1" /> {t("Chat", "محادثة")}</Button>
               <Button variant="outline" size="sm" className="text-sm text-success border-success/30 hover:bg-success/5">
                 <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214l-.252-.149-2.868.852.852-2.868-.149-.252A8 8 0 1112 20z"/></svg>
-                WhatsApp
+                {t("WhatsApp", "واتساب")}
               </Button>
-              <Button variant="outline" size="sm" className="text-sm"><Phone className="h-4 w-4 mr-1" /> Call</Button>
+              <Button variant="outline" size="sm" className="text-sm"><Phone className="h-4 w-4 mr-1" /> {t("Call", "اتصال")}</Button>
             </div>
 
             <div className="rounded-xl border border-border p-4 flex items-start gap-3">
               <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-foreground">Compound Delivery</p>
-                <p className="text-xs text-muted-foreground">Delivery within Dar Misr Al-Andalus compound</p>
+                <p className="text-sm font-semibold text-foreground">{t("Compound Delivery", "توصيل داخل الكمبوند")}</p>
+                <p className="text-xs text-muted-foreground">{t("Delivery within Dar Misr Al-Andalus compound", "توصيل داخل كمبوند دار مصر الأندلس")}</p>
               </div>
             </div>
 
             <div>
-              <h3 className="font-semibold text-foreground mb-2">Description</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{product.description_en}</p>
-              {product.description_ar && <p className="text-sm text-muted-foreground leading-relaxed mt-2 font-body" dir="rtl">{product.description_ar}</p>}
+              <h3 className="font-semibold text-foreground mb-2">{t("Description", "الوصف")}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed" dir={lang === "ar" && product.description_ar ? "rtl" : "ltr"}>{displayDescription}</p>
             </div>
           </div>
         </div>
