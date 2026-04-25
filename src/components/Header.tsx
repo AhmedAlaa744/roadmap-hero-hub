@@ -1,10 +1,11 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import NotificationBell from "@/components/NotificationBell";
 import {
   DropdownMenu,
@@ -16,9 +17,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
+interface Suggestion {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  price: number;
+  images: string[] | null;
+}
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const desktopWrapRef = useRef<HTMLDivElement>(null);
+  const mobileWrapRef = useRef<HTMLDivElement>(null);
   const { user, profile, signOut, isAdmin, isMerchant } = useAuth();
   const { totalItems } = useCart();
   const { lang, toggleLang, t } = useLanguage();
@@ -33,8 +47,99 @@ const Header = () => {
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
+    setShowSuggestions(false);
     navigate(q ? `/browse?q=${encodeURIComponent(q)}` : "/browse");
     setIsMenuOpen(false);
+  };
+
+  // Live suggestions (debounced 200ms)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const escaped = q.replace(/[%,]/g, " ").trim();
+      const { data } = await supabase
+        .from("products")
+        .select("id,name_en,name_ar,price,images")
+        .eq("is_active", true)
+        .or(`name_en.ilike.%${escaped}%,name_ar.ilike.%${escaped}%`)
+        .limit(5);
+      if (cancelled) return;
+      setSuggestions((data as Suggestion[]) || []);
+      setShowSuggestions(true);
+      setActiveIdx(-1);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchQuery]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        desktopWrapRef.current && !desktopWrapRef.current.contains(target) &&
+        mobileWrapRef.current && !mobileWrapRef.current.contains(target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Enter" && activeIdx >= 0) {
+      e.preventDefault();
+      const s = suggestions[activeIdx];
+      setShowSuggestions(false);
+      setIsMenuOpen(false);
+      navigate(`/product/${s.id}`);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+    }
+  };
+
+  const renderSuggestions = () => {
+    if (!showSuggestions || suggestions.length === 0) return null;
+    return (
+      <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg overflow-hidden">
+        {suggestions.map((s, i) => {
+          const name = lang === "ar" && s.name_ar ? s.name_ar : s.name_en;
+          return (
+            <Link
+              key={s.id}
+              to={`/product/${s.id}`}
+              onClick={() => { setShowSuggestions(false); setIsMenuOpen(false); }}
+              className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
+                i === activeIdx ? "bg-muted" : "hover:bg-muted/60"
+              }`}
+            >
+              {s.images?.[0] ? (
+                <img src={s.images[0]} alt={name} className="h-9 w-9 rounded object-cover shrink-0" />
+              ) : (
+                <div className="h-9 w-9 rounded bg-muted shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-foreground">{name}</p>
+                <p className="text-xs text-primary font-semibold">EGP {Number(s.price).toLocaleString()}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -53,16 +158,19 @@ const Header = () => {
         </Link>
 
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl">
-          <div className="relative w-full">
+          <div ref={desktopWrapRef} className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder={t("Search products...", "ابحث عن منتجات...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim().length >= 2 && setShowSuggestions(true)}
+              onKeyDown={handleKeyDown}
               dir={lang === "ar" ? "rtl" : "ltr"}
               className="w-full rounded-lg border border-input bg-background px-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            {renderSuggestions()}
           </div>
         </form>
 
@@ -143,16 +251,19 @@ const Header = () => {
       </div>
 
       <form onSubmit={handleSearch} className="md:hidden px-4 pb-3">
-        <div className="relative w-full">
+        <div ref={mobileWrapRef} className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder={t("Search products...", "ابحث عن منتجات...")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery.trim().length >= 2 && setShowSuggestions(true)}
+            onKeyDown={handleKeyDown}
             dir={lang === "ar" ? "rtl" : "ltr"}
             className="w-full rounded-lg border border-input bg-background px-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          {renderSuggestions()}
         </div>
       </form>
 
