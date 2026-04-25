@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 const conditionStyles = {
@@ -14,7 +15,11 @@ const conditionStyles = {
   used: "bg-accent/15 text-accent border-accent/30",
   used_as_new: "bg-primary/15 text-primary border-primary/30",
 };
-const conditionLabels = { new: "New", used: "Used", used_as_new: "Used as New" };
+const conditionLabels: Record<string, [string, string]> = {
+  new: ["New", "جديد"],
+  used: ["Used", "مستعمل"],
+  used_as_new: ["Used as New", "كالجديد"],
+};
 
 const toProduct = (p: any) => ({
   id: p.id,
