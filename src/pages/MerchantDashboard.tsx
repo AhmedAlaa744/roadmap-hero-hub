@@ -285,7 +285,34 @@ const MerchantDashboard = () => {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-foreground mb-2">{store.name_en}</h1>
-        <p className="text-sm text-muted-foreground mb-8">Merchant Dashboard</p>
+        <p className="text-sm text-muted-foreground mb-8">{t("Merchant Dashboard", "لوحة التاجر")}</p>
+
+        {/* Store contact card */}
+        <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            {t("Store Contact", "بيانات تواصل المتجر")}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground">{t("Phone", "الهاتف")} *</label>
+              <Input value={storePhone} onChange={(e) => setStorePhone(e.target.value)} placeholder="01xxxxxxxxx" className="mt-1" />
+            </div>
+            <div className="flex items-center gap-2 pt-5">
+              <input type="checkbox" id="wa-enabled" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} />
+              <label htmlFor="wa-enabled" className="text-sm text-foreground">{t("WhatsApp available", "واتساب متاح")}</label>
+            </div>
+            {waEnabled && (
+              <div>
+                <label className="text-xs font-medium text-foreground">{t("WhatsApp number", "رقم واتساب")}</label>
+                <Input value={waPhone} onChange={(e) => setWaPhone(e.target.value)} placeholder={storePhone || "01xxxxxxxxx"} className="mt-1" />
+              </div>
+            )}
+          </div>
+          <Button size="sm" onClick={() => saveStoreContact(waEnabled, waPhone, storePhone)}>
+            {t("Save Contact Info", "حفظ بيانات التواصل")}
+          </Button>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
