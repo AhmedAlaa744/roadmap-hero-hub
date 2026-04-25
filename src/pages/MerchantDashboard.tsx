@@ -227,9 +227,27 @@ const MerchantDashboard = () => {
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
+    // Optimistic update so the select reflects the change immediately
+    const prev = orders;
+    setOrders((curr) => curr.map((o) => (o.id === id ? { ...o, status } : o)));
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success(`Order ${status}`); fetchData(); }
+    if (error) {
+      setOrders(prev); // revert
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Order ${status.replace(/_/g, " ")}`);
+  };
+
+  const saveStoreContact = async (whatsapp_enabled: boolean, whatsapp_phone: string, phone: string) => {
+    if (!store) return;
+    const { error } = await supabase
+      .from("stores")
+      .update({ phone: phone || null, whatsapp_enabled, whatsapp_phone: whatsapp_phone || null })
+      .eq("id", store.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Store contact info saved");
+    setStore({ ...store, phone, whatsapp_enabled, whatsapp_phone });
   };
 
   if (authLoading || loading) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Loading...</div></div>;
