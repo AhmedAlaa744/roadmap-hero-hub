@@ -559,7 +559,7 @@ const MerchantDashboard = () => {
                     }`}>{o.status.replace(/_/g, " ")}</span>
                   </div>
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("Building", "عمارة")} {o.building}{o.floor ? `, ${t("Floor", "الدور")} ${o.floor}` : ""}{o.apartment ? `, ${t("Apt", "شقة")} ${o.apartment}` : ""}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <label className="text-xs text-muted-foreground">{t("Set status:", "تعيين الحالة:")}</label>
                     <select
@@ -577,7 +577,7 @@ const MerchantDashboard = () => {
                   </div>
                 </div>
               ))}
-              {orders.length === 0 && <p className="text-center text-muted-foreground py-8">No orders yet</p>}
+              {orders.length === 0 && <p className="text-center text-muted-foreground py-8">{t("No orders yet", "لا توجد طلبات بعد")}</p>}
             </div>
           </TabsContent>
         </Tabs>
@@ -586,33 +586,33 @@ const MerchantDashboard = () => {
       <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
         <DialogContent className="bg-card">
           <DialogHeader>
-            <DialogTitle>Request more product slots</DialogTitle>
+            <DialogTitle>{t("Request more product slots", "طلب خانات منتجات إضافية")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Current limit: <strong>{slotLimit}</strong> active products. Tell the admin how many extra slots you need and why.
+              {t("Current limit:", "الحد الحالي:")} <strong>{slotLimit}</strong> {t("active products. Tell the admin how many extra slots you need and why.", "منتج نشط. أخبر المسؤول بعدد الخانات الإضافية التي تحتاجها والسبب.")}
             </p>
             <div>
-              <label className="text-sm font-medium text-foreground">Extra slots requested</label>
+              <label className="text-sm font-medium text-foreground">{t("Extra slots requested", "عدد الخانات الإضافية المطلوبة")}</label>
               <Input type="number" min="1" value={requestExtra} onChange={(e) => setRequestExtra(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Reason (optional)</label>
+              <label className="text-sm font-medium text-foreground">{t("Reason (optional)", "السبب (اختياري)")}</label>
               <textarea
                 value={requestReason}
                 onChange={(e) => setRequestReason(e.target.value)}
                 className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
-                placeholder="e.g. expanding our product line for the new season..."
+                placeholder={t("e.g. expanding our product line for the new season...", "مثال: نحن نوسّع تشكيلة منتجاتنا للموسم الجديد...")}
               />
             </div>
             {slotRequests.length > 0 && (
               <div className="rounded-lg border border-border p-2 max-h-32 overflow-y-auto text-xs space-y-1">
-                <p className="font-medium text-foreground">Recent requests</p>
+                <p className="font-medium text-foreground">{t("Recent requests", "الطلبات الأخيرة")}</p>
                 {slotRequests.slice(0, 5).map((r) => (
                   <div key={r.id} className="flex justify-between text-muted-foreground">
-                    <span>+{r.requested_extra} slots</span>
+                    <span>+{r.requested_extra} {t("slots", "خانة")}</span>
                     <span className={r.status === "approved" ? "text-success" : r.status === "rejected" ? "text-destructive" : "text-warning"}>
-                      {r.status}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
+                      {r.status === "approved" ? t("approved", "موافق عليه") : r.status === "rejected" ? t("rejected", "مرفوض") : t("pending", "قيد المراجعة")}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
                     </span>
                   </div>
                 ))}
@@ -620,8 +620,8 @@ const MerchantDashboard = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
-            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> Send Request</Button>
+            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>{t("Cancel", "إلغاء")}</Button>
+            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> {t("Send Request", "إرسال الطلب")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
