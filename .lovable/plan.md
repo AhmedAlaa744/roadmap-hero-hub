@@ -1,37 +1,64 @@
 
 
-Three features. Let me plan carefully.
+## Plan
 
-### 1. Verified-buyer reviews
-RLS on `reviews`: tighten INSERT to require `auth.uid() = user_id` AND a delivered order containing the product. Need a SECURITY DEFINER helper `user_has_delivered_product(_user_id, _product_id)` checking `orders` (status='delivered') JOIN `order_items` for the product. Update `Users can create reviews` policy to use it. UI in `ProductDetail.tsx`: only show review form if helper-equivalent client check passes; show "Only verified buyers can review" otherwise.
+### 1. Bilingual translations with `useLanguage` (`t(en, ar)` + `dir`)
+Wrap each page in `dir={lang === "ar" ? "rtl" : "ltr"}` and translate visible strings:
+- **`src/pages/ProductDetail.tsx`** — labels: Add to Cart, Buy Now, Stock, Reviews, Description, Verified buyers only message, rating labels.
+- **`src/pages/Cart.tsx`** — Cart title, empty state, totals, Checkout button, Continue Shopping.
+- **`src/pages/Checkout.tsx`** — Delivery details, Building/Floor/Apartment, Notes, Payment method (COD / Card), Place Order, validation toasts.
+- **`src/pages/Account.tsx`** — My Account, Profile fields, My Orders, Sign Out.
+- **`src/pages/MerchantDashboard.tsx`** — Stats (Active Products, Orders, Revenue, Rating, slots, Request more), Tabs (Products / Orders), all form labels, status select options, slot-request dialog, toasts, replace/edit buttons.
+- **`src/pages/AdminPanel.tsx`** — every tab title, table headers, action buttons, Slot Requests tab labels, toasts.
 
-### 2. Order-status notifications + bell
-- DB: trigger on `orders` AFTER UPDATE OF status — INSERT into `notifications` (user_id=customer_id, title="Order #X is now <status>", body). Bypasses RLS via SECURITY DEFINER.
-- Realtime: enable `ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;` and set REPLICA IDENTITY FULL.
-- UI: new `NotificationBell.tsx` in `Header.tsx` — bell icon with unread count badge, dropdown listing recent notifications, click marks read. Subscribes to `notifications` realtime for current user.
+### 2. Live search dropdown in `Header.tsx`
+Under the desktop + mobile search input, add a popover with **top 5 active products** matching the current query (debounced 200 ms). Each item shows thumbnail, bilingual name, price, store. Click → `/product/:id`. Pressing Enter or clicking outside closes it.
+- Query: `supabase.from("products").select("id,name_en,name_ar,price,images,store_id").eq("is_active", true).or(\`name_en.ilike.%q%,name_ar.ilike.%q%\`).limit(5)`.
+- Keyboard: ↑/↓ navigates, Enter selects.
+- Hide when query length < 2.
 
-### 3. Merchant 20-slot cap + request flow + replace
-- New table `slot_requests` (user_id, store_id, requested_extra int, reason text, status pending/approved/rejected, granted_extra int).
-- RLS: owners can SELECT/INSERT own; admins ALL.
-- Effective cap = 20 + sum(granted_extra of approved requests for that store).
-- Add helper `merchant_active_slot_limit(_store_id)` returning int.
-- Trigger BEFORE INSERT on `products`: if active product count for store >= limit → raise.
-- "Replace product": new product replaces existing one — implement client-side as "edit" already does. To make a true atomic swap that doesn't trip the cap when at the cap, add a `replaces_product_id` param flow: in `MerchantDashboard.tsx` add a "Replace" button on each product → opens product form prefilled empty; on submit, server-side via edge function `replace-product` that deletes (or sets is_active=false) the old then inserts new in a single transaction. Simpler & safer: keep it as UPDATE-in-place under a "Replace" UI that resets all fields — this is just an edit. Since edit doesn't consume a slot, "Replace" = edit with cleared fields. Done client-side, no backend change needed for replace itself.
-- Admin panel: new "Slot Requests" tab to approve/reject and set granted_extra.
-- Merchant dashboard: show "X / Y slots used", "Request more slots" button → dialog → inserts row.
+### 3. Merchant "Add Product" form — Arabic-first + WhatsApp fields
+- Translate every label/placeholder/option (Condition, Pricing model, Brand, Stock, Image upload prompt, Save buttons) using `t(en, ar)`.
+- Add **store-level contact fields** to the dashboard "Store settings" area (or just at the top of the Products tab when missing):
+  - **Phone** (required, prefilled from `stores.phone`).
+  - **WhatsApp available** checkbox.
+  - **WhatsApp number** (shown only when checkbox is on; defaults to phone if empty).
+- DB migration:
+  - `ALTER TABLE public.stores ADD COLUMN whatsapp_enabled boolean NOT NULL DEFAULT false;`
+  - `ALTER TABLE public.stores ADD COLUMN whatsapp_phone text;`
+- Update `StorePage.tsx` and `ProductDetail.tsx` later (out of scope here unless trivial) — for now just persist the data; surface a "WhatsApp" link on the merchant dashboard preview row.
 
-### Migration (single)
-- `user_has_delivered_product` function + tighten reviews INSERT policy.
-- Notifications insert trigger on orders status change + enable realtime.
-- `slot_requests` table + RLS + `merchant_active_slot_limit` function + product-cap trigger.
+### 4. Order status — fix "only pending/confirmed reflect to customer"
+Diagnosis: realtime is enabled on `orders`, the trigger writes to `notifications`, but the merchant `<select>` currently allows all 6 statuses including `preparing`, `out_for_delivery`, `delivered`, `cancelled`. The likely root cause the user is reporting is that these later statuses just don't *appear to update* — because:
+1. The select fires `updateOrderStatus` and re-fetches, but there is **no realtime subscription on the merchant dashboard**, so after the update the local view may stale-revert when another tab is open. Fix: keep `fetchData()` after the update (already done) AND add an optimistic local update in `updateOrderStatus` so the UI reflects immediately.
+2. Customer side: `OrderTracking.tsx` already has a realtime subscription and renders all statuses — verified by reading the file. Notifications also fire from the trigger. So the customer **does** see updates; the user's perception is likely the merchant select reverting.
+- Fix in `MerchantDashboard.updateOrderStatus`: optimistically update `orders` state before/instead of full `fetchData`, and surface backend errors clearly.
+- Also re-confirm `notifications` table is already enabled for realtime (it is) and the bell shows the new entries.
+
+### Migration (single SQL file)
+```sql
+ALTER TABLE public.stores
+  ADD COLUMN IF NOT EXISTS whatsapp_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS whatsapp_phone text;
+```
 
 ### Files
-- **Migration**: all of the above
-- **New**: `src/components/NotificationBell.tsx`
-- **Edit**: `src/components/Header.tsx` (mount bell), `src/pages/ProductDetail.tsx` (gate review form), `src/pages/MerchantDashboard.tsx` (slot counter, request dialog, replace button = edit-with-cleared-fields), `src/pages/AdminPanel.tsx` (slot-requests tab)
+- **Migration**: `stores` whatsapp columns.
+- **Edit**:
+  - `src/components/Header.tsx` — live search dropdown.
+  - `src/pages/ProductDetail.tsx`, `src/pages/Cart.tsx`, `src/pages/Checkout.tsx`, `src/pages/Account.tsx`, `src/pages/MerchantDashboard.tsx`, `src/pages/AdminPanel.tsx` — `useLanguage` translations + RTL dir.
+  - `src/pages/MerchantDashboard.tsx` — store contact section (phone + WA toggle + WA number), optimistic order-status update.
 
 ### Out of scope
-- Email notifications (in-app + realtime covers the request)
-- Delivered-purchase enforcement on existing reviews (only new ones gated)
-- Aggregated analytics for slot usage
+- Full translation of every secondary string (toasts already covered for new code; existing toasts left as-is unless trivially nearby).
+- Surfacing WhatsApp button on `StorePage` / `ProductDetail` (data is captured; UI exposure can be a follow-up).
+- Moving order-status enum to a DB CHECK constraint or enum type.
+- Additional category keyword tuning beyond what's in `categorize.ts`.
+
+### Test checklist after implementation
+1. Toggle EN→AR in header; verify ProductDetail, Cart, Checkout, Account, MerchantDashboard, AdminPanel flip to RTL with translated labels.
+2. Type "cake" in header search → see live dropdown of up to 5 matches; click one → product page.
+3. As a merchant, type "iPhone 15" in Name (EN) → blur → Electronics auto-selected.
+4. Open store settings → enable WhatsApp + enter number → save → reload, value persists.
+5. As merchant, set an order to `preparing` then `out_for_delivery` then `delivered` → customer's `OrderTracking` updates live and notification bell shows new entries.
 
