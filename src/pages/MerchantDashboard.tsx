@@ -15,7 +15,7 @@ import { suggestCategoryName } from "@/lib/categorize";
 
 const MerchantDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
   const navigate = useNavigate();
   const [waEnabled, setWaEnabled] = useState(false);
   const [waPhone, setWaPhone] = useState("");
@@ -319,52 +319,54 @@ const MerchantDashboard = () => {
           <div className="rounded-xl border border-border bg-card p-4">
             <Package className="h-5 w-5 text-primary mb-2" />
             <p className="text-2xl font-bold text-foreground">{activeCount}</p>
-            <p className="text-xs text-muted-foreground">Active Products</p>
+            <p className="text-xs text-muted-foreground">{t("Active Products", "المنتجات النشطة")}</p>
             <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (activeCount / slotLimit) * 100)}%` }} />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} slots</p>
+              <p className="text-xs text-muted-foreground">{activeCount}/{slotLimit} {t("slots", "خانة")}</p>
               <button onClick={() => setShowRequestDialog(true)} className="text-xs text-primary hover:underline font-medium">
-                Request more
+                {t("Request more", "اطلب المزيد")}
               </button>
             </div>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <ShoppingCart className="h-5 w-5 text-accent mb-2" />
             <p className="text-2xl font-bold text-foreground">{orders.length}</p>
-            <p className="text-xs text-muted-foreground">Orders</p>
+            <p className="text-xs text-muted-foreground">{t("Orders", "الطلبات")}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <DollarSign className="h-5 w-5 text-success mb-2" />
             <p className="text-2xl font-bold text-foreground">EGP {totalRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Revenue</p>
+            <p className="text-xs text-muted-foreground">{t("Revenue", "الإيرادات")}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <Star className="h-5 w-5 text-warning mb-2" />
             <p className="text-2xl font-bold text-foreground">—</p>
-            <p className="text-xs text-muted-foreground">Rating</p>
+            <p className="text-xs text-muted-foreground">{t("Rating", "التقييم")}</p>
           </div>
         </div>
 
         <Tabs defaultValue="products">
           <TabsList>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="products">{t("Products", "المنتجات")}</TabsTrigger>
+            <TabsTrigger value="orders">{t("Orders", "الطلبات")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="mt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-foreground">My Products</h2>
-              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? "Slot limit reached — request more or replace a product" : ""}>
-                <Plus className="h-4 w-4 mr-1" /> Add Product
+              <h2 className="font-semibold text-foreground">{t("My Products", "منتجاتي")}</h2>
+              <Button size="sm" onClick={() => { setReplacingId(null); setShowAddProduct(true); }} disabled={atSlotLimit} title={atSlotLimit ? t("Slot limit reached — request more or replace a product", "تم الوصول إلى حد الخانات — اطلب المزيد أو استبدل منتجًا") : ""}>
+                <Plus className="h-4 w-4 mr-1" /> {t("Add Product", "إضافة منتج")}
               </Button>
             </div>
             {atSlotLimit && (
               <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 mb-4 text-xs text-foreground">
-                You've reached your {slotLimit}-product limit. Use <strong>Replace</strong> on an existing item, or{" "}
-                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>request more slots</button>.
-                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">(A request for +{pendingSlotRequest.requested_extra} is pending review.)</span>}
+                {t(`You've reached your ${slotLimit}-product limit. Use`, `لقد وصلت إلى حد ${slotLimit} منتج. استخدم`)}{" "}
+                <strong>{t("Replace", "استبدال")}</strong>{" "}
+                {t("on an existing item, or", "لمنتج موجود، أو")}{" "}
+                <button className="underline text-primary" onClick={() => setShowRequestDialog(true)}>{t("request more slots", "اطلب خانات إضافية")}</button>.
+                {pendingSlotRequest && <span className="ml-2 text-muted-foreground">({t(`A request for +${pendingSlotRequest.requested_extra} is pending review.`, `طلب +${pendingSlotRequest.requested_extra} قيد المراجعة.`)})</span>}
               </div>
             )}
 
@@ -372,7 +374,7 @@ const MerchantDashboard = () => {
               <form onSubmit={handleAddProduct} className="rounded-xl border border-border bg-card p-6 mb-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Name (EN) *</label>
+                    <label className="text-sm font-medium text-foreground">{t("Name (EN)", "الاسم (إنجليزي)")} *</label>
                     <Input
                       value={newProduct.name_en}
                       onChange={(e) => setNewProduct({ ...newProduct, name_en: e.target.value })}
@@ -391,7 +393,7 @@ const MerchantDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Name (AR)</label>
+                    <label className="text-sm font-medium text-foreground">{t("Name (AR)", "الاسم (عربي)")}</label>
                     <Input
                       value={newProduct.name_ar}
                       onChange={(e) => setNewProduct({ ...newProduct, name_ar: e.target.value })}
@@ -410,62 +412,62 @@ const MerchantDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Description (EN)</label>
+                    <label className="text-sm font-medium text-foreground">{t("Description (EN)", "الوصف (إنجليزي)")}</label>
                     <textarea value={newProduct.description_en} onChange={(e) => setNewProduct({ ...newProduct, description_en: e.target.value })} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Description (AR)</label>
+                    <label className="text-sm font-medium text-foreground">{t("Description (AR)", "الوصف (عربي)")}</label>
                     <textarea value={newProduct.description_ar} onChange={(e) => setNewProduct({ ...newProduct, description_ar: e.target.value })} dir="rtl" className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Price (EGP) *</label>
+                    <label className="text-sm font-medium text-foreground">{t("Price (EGP)", "السعر (جنيه)")} *</label>
                     <Input type="number" min="0" step="0.01" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} required className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Category *</label>
+                    <label className="text-sm font-medium text-foreground">{t("Category", "الفئة")} *</label>
                     <select value={newProduct.category_id} onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })} required className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                      <option value="">Select</option>
-                      {categories.map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
+                      <option value="">{t("Select", "اختر")}</option>
+                      {categories.map((c) => <option key={c.id} value={c.id}>{t(c.name_en, c.name_ar)}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Condition</label>
+                    <label className="text-sm font-medium text-foreground">{t("Condition", "الحالة")}</label>
                     <select value={newProduct.condition} onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                      <option value="new">New</option>
-                      <option value="used">Used</option>
-                      <option value="used_as_new">Used as New</option>
+                      <option value="new">{t("New", "جديد")}</option>
+                      <option value="used">{t("Used", "مستعمل")}</option>
+                      <option value="used_as_new">{t("Used as New", "كالجديد")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Pricing Model</label>
+                    <label className="text-sm font-medium text-foreground">{t("Pricing Model", "نظام التسعير")}</label>
                     <select value={newProduct.pricing_model} onChange={(e) => setNewProduct({ ...newProduct, pricing_model: e.target.value })} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                      <option value="fixed">Fixed Price</option>
-                      <option value="negotiable">Negotiable</option>
-                      <option value="auction">Auction</option>
+                      <option value="fixed">{t("Fixed Price", "سعر ثابت")}</option>
+                      <option value="negotiable">{t("Negotiable", "قابل للتفاوض")}</option>
+                      <option value="auction">{t("Auction", "مزاد")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Brand</label>
+                    <label className="text-sm font-medium text-foreground">{t("Brand", "الماركة")}</label>
                     <Input value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Stock</label>
+                    <label className="text-sm font-medium text-foreground">{t("Stock", "المخزون")}</label>
                     <Input type="number" min="1" value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })} className="mt-1" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-foreground">Product Image</label>
+                    <label className="text-sm font-medium text-foreground">{t("Product Image", "صورة المنتج")}</label>
                     <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1 text-sm" />
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   {replacingId && (
                     <p className="text-xs text-muted-foreground">
-                      🔄 Replacing existing product. Saving will overwrite it (no new slot used).
+                      🔄 {t("Replacing existing product. Saving will overwrite it (no new slot used).", "جارٍ استبدال منتج موجود. الحفظ سيستبدل المنتج (دون استخدام خانة جديدة).")}
                     </p>
                   )}
                   <div className="flex gap-3 ml-auto">
-                    <Button type="submit" disabled={loading}>{replacingId ? "Save Replacement" : "Save Product"}</Button>
-                    <Button type="button" variant="outline" onClick={() => { setShowAddProduct(false); setReplacingId(null); }}>Cancel</Button>
+                    <Button type="submit" disabled={loading}>{replacingId ? t("Save Replacement", "حفظ الاستبدال") : t("Save Product", "حفظ المنتج")}</Button>
+                    <Button type="button" variant="outline" onClick={() => { setShowAddProduct(false); setReplacingId(null); }}>{t("Cancel", "إلغاء")}</Button>
                   </div>
                 </div>
               </form>
@@ -476,27 +478,27 @@ const MerchantDashboard = () => {
                 <div key={p.id} className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
                   {p.images?.[0] && <img src={p.images[0]} alt={p.name_en} className="h-14 w-14 rounded-lg object-cover" />}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">{p.name_en}</p>
+                    <p className="font-semibold text-foreground truncate">{lang === "ar" && p.name_ar ? p.name_ar : p.name_en}</p>
                     {editingId === p.id ? (
                       <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <label className="text-xs text-muted-foreground">Price</label>
+                        <label className="text-xs text-muted-foreground">{t("Price", "السعر")}</label>
                         <Input type="number" min="0" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 w-24" />
-                        <label className="text-xs text-muted-foreground">Stock</label>
+                        <label className="text-xs text-muted-foreground">{t("Stock", "المخزون")}</label>
                         <Input type="number" min="0" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="h-8 w-20" />
                       </div>
                     ) : (
                       <p className="text-sm text-primary font-bold">
                         EGP {Number(p.price).toLocaleString()}
-                        <span className="text-xs text-muted-foreground font-normal ml-2">Stock: {p.stock}</span>
+                        <span className="text-xs text-muted-foreground font-normal ml-2">{t("Stock", "المخزون")}: {p.stock}</span>
                       </p>
                     )}
                   </div>
                   <button
                     onClick={() => toggleActive(p.id, p.is_active)}
                     className={`text-xs px-2 py-1 rounded-full transition-colors cursor-pointer ${p.is_active ? "bg-success/10 text-success hover:bg-success/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-                    title={p.is_active ? "Click to pause" : "Click to activate"}
+                    title={p.is_active ? t("Click to pause", "اضغط للإيقاف المؤقت") : t("Click to activate", "اضغط للتفعيل")}
                   >
-                    {p.is_active ? "Active" : "Paused"}
+                    {p.is_active ? t("Active", "نشط") : t("Paused", "متوقف")}
                   </button>
                   {editingId === p.id ? (
                     <>
@@ -509,16 +511,16 @@ const MerchantDashboard = () => {
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? "Pause listing" : "Activate listing"}>
+                      <Button variant="ghost" size="icon" onClick={() => toggleActive(p.id, p.is_active)} title={p.is_active ? t("Pause listing", "إيقاف الإعلان") : t("Activate listing", "تفعيل الإعلان")}>
                         {p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit price/stock">
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title={t("Edit price/stock", "تعديل السعر/المخزون")}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        title="Replace product (does not consume a slot)"
+                        title={t("Replace product (does not consume a slot)", "استبدال المنتج (لا يستهلك خانة)")}
                         onClick={() => {
                           setReplacingId(p.id);
                           setNewProduct({ name_en: "", name_ar: "", description_en: "", description_ar: "", price: "", category_id: "", condition: "new", pricing_model: "fixed", brand: "", stock: "1" });
@@ -536,7 +538,7 @@ const MerchantDashboard = () => {
                   )}
                 </div>
               ))}
-              {products.length === 0 && <p className="text-center text-muted-foreground py-8">No products yet. Add your first product!</p>}
+              {products.length === 0 && <p className="text-center text-muted-foreground py-8">{t("No products yet. Add your first product!", "لا توجد منتجات بعد. أضف أول منتج لك!")}</p>}
             </div>
           </TabsContent>
 
@@ -557,7 +559,7 @@ const MerchantDashboard = () => {
                     }`}>{o.status.replace(/_/g, " ")}</span>
                   </div>
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Building {o.building}{o.floor ? `, Floor ${o.floor}` : ""}{o.apartment ? `, Apt ${o.apartment}` : ""}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("Building", "عمارة")} {o.building}{o.floor ? `, ${t("Floor", "الدور")} ${o.floor}` : ""}{o.apartment ? `, ${t("Apt", "شقة")} ${o.apartment}` : ""}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <label className="text-xs text-muted-foreground">{t("Set status:", "تعيين الحالة:")}</label>
                     <select
@@ -575,7 +577,7 @@ const MerchantDashboard = () => {
                   </div>
                 </div>
               ))}
-              {orders.length === 0 && <p className="text-center text-muted-foreground py-8">No orders yet</p>}
+              {orders.length === 0 && <p className="text-center text-muted-foreground py-8">{t("No orders yet", "لا توجد طلبات بعد")}</p>}
             </div>
           </TabsContent>
         </Tabs>
@@ -584,33 +586,33 @@ const MerchantDashboard = () => {
       <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
         <DialogContent className="bg-card">
           <DialogHeader>
-            <DialogTitle>Request more product slots</DialogTitle>
+            <DialogTitle>{t("Request more product slots", "طلب خانات منتجات إضافية")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Current limit: <strong>{slotLimit}</strong> active products. Tell the admin how many extra slots you need and why.
+              {t("Current limit:", "الحد الحالي:")} <strong>{slotLimit}</strong> {t("active products. Tell the admin how many extra slots you need and why.", "منتج نشط. أخبر المسؤول بعدد الخانات الإضافية التي تحتاجها والسبب.")}
             </p>
             <div>
-              <label className="text-sm font-medium text-foreground">Extra slots requested</label>
+              <label className="text-sm font-medium text-foreground">{t("Extra slots requested", "عدد الخانات الإضافية المطلوبة")}</label>
               <Input type="number" min="1" value={requestExtra} onChange={(e) => setRequestExtra(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Reason (optional)</label>
+              <label className="text-sm font-medium text-foreground">{t("Reason (optional)", "السبب (اختياري)")}</label>
               <textarea
                 value={requestReason}
                 onChange={(e) => setRequestReason(e.target.value)}
                 className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
-                placeholder="e.g. expanding our product line for the new season..."
+                placeholder={t("e.g. expanding our product line for the new season...", "مثال: نحن نوسّع تشكيلة منتجاتنا للموسم الجديد...")}
               />
             </div>
             {slotRequests.length > 0 && (
               <div className="rounded-lg border border-border p-2 max-h-32 overflow-y-auto text-xs space-y-1">
-                <p className="font-medium text-foreground">Recent requests</p>
+                <p className="font-medium text-foreground">{t("Recent requests", "الطلبات الأخيرة")}</p>
                 {slotRequests.slice(0, 5).map((r) => (
                   <div key={r.id} className="flex justify-between text-muted-foreground">
-                    <span>+{r.requested_extra} slots</span>
+                    <span>+{r.requested_extra} {t("slots", "خانة")}</span>
                     <span className={r.status === "approved" ? "text-success" : r.status === "rejected" ? "text-destructive" : "text-warning"}>
-                      {r.status}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
+                      {r.status === "approved" ? t("approved", "موافق عليه") : r.status === "rejected" ? t("rejected", "مرفوض") : t("pending", "قيد المراجعة")}{r.status === "approved" && r.granted_extra ? ` (+${r.granted_extra})` : ""}
                     </span>
                   </div>
                 ))}
@@ -618,8 +620,8 @@ const MerchantDashboard = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
-            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> Send Request</Button>
+            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>{t("Cancel", "إلغاء")}</Button>
+            <Button onClick={submitSlotRequest}><Send className="h-4 w-4 mr-1" /> {t("Send Request", "إرسال الطلب")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
