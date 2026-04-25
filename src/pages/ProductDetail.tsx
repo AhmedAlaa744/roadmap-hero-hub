@@ -143,7 +143,7 @@ const ProductDetail = () => {
 
   const submitReview = async () => {
     if (!currentUserId) {
-      toast.error("Please log in to leave a review");
+      toast.error(t("Please log in to leave a review", "الرجاء تسجيل الدخول لإضافة مراجعة"));
       return;
     }
     setSubmittingReview(true);
@@ -153,7 +153,7 @@ const ProductDetail = () => {
       : await supabase.from("reviews").insert({ product_id: id!, user_id: currentUserId, rating: reviewRating, comment: reviewComment || null });
     setSubmittingReview(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(existing ? "Review updated" : "Review submitted");
+    toast.success(existing ? t("Review updated", "تم تحديث المراجعة") : t("Review submitted", "تم إرسال المراجعة"));
     setReviewComment("");
     fetchReviews(id!);
   };
@@ -161,7 +161,7 @@ const ProductDetail = () => {
   const deleteReview = async (reviewId: string) => {
     const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
     if (error) { toast.error(error.message); return; }
-    toast.success("Review deleted");
+    toast.success(t("Review deleted", "تم حذف المراجعة"));
     fetchReviews(id!);
   };
 
