@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/CartContext";
@@ -15,29 +15,22 @@ const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
   const { t, dir, lang } = useLanguage();
-  const navigate = useNavigate();
   const [building, setBuilding] = useState("");
   const [floor, setFloor] = useState("");
   const [apartment, setApartment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "online">("cod");
   const [notes, setNotes] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background" dir={dir}>
-        <Header />
-        <div className="container mx-auto px-4 py-20 text-center">
-          <p className="text-lg text-muted-foreground mb-4">{t("Please sign in to checkout", "الرجاء تسجيل الدخول لإتمام الطلب")}</p>
-          <Link to="/login"><Button>{t("Sign In", "تسجيل الدخول")}</Button></Link>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const [orderPhone, setOrderPhone] = useState("");
 
   if (orderNumber) {
+    const trackHref = user
+      ? "/account"
+      : `/track?order=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(orderPhone)}`;
     return (
       <div className="min-h-screen bg-background" dir={dir}>
         <Header />
@@ -46,9 +39,18 @@ const Checkout = () => {
           <h1 className="text-2xl font-bold text-foreground">{t("Order Placed!", "تم تقديم الطلب!")}</h1>
           <p className="text-muted-foreground mt-2">{t("Your order number is", "رقم طلبك هو")}</p>
           <p className="text-2xl font-bold text-primary mt-2">{orderNumber}</p>
-          <p className="text-sm text-muted-foreground mt-4">{t("You'll receive updates on your order status.", "ستتلقى تحديثات حول حالة طلبك.")}</p>
+          {!user ? (
+            <p className="text-sm text-muted-foreground mt-4">
+              {t(
+                "Save this number. You can track your order using it and the phone number you entered.",
+                "احفظ هذا الرقم. يمكنك تتبع طلبك باستخدامه ورقم الهاتف الذي أدخلته."
+              )}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-4">{t("You'll receive updates on your order status.", "ستتلقى تحديثات حول حالة طلبك.")}</p>
+          )}
           <div className="flex gap-3 justify-center mt-8">
-            <Link to="/account"><Button variant="outline">{t("My Orders", "طلباتي")}</Button></Link>
+            <Link to={trackHref}><Button variant="outline">{user ? t("My Orders", "طلباتي") : t("Track Order", "تتبع الطلب")}</Button></Link>
             <Link to="/browse"><Button>{t("Continue Shopping", "متابعة التسوق")}</Button></Link>
           </div>
         </div>
@@ -66,6 +68,21 @@ const Checkout = () => {
       toast.error(t("Your cart is empty", "سلتك فارغة"));
       return;
     }
+    if (!user) {
+      if (guestName.trim().length < 2) {
+        toast.error(t("Full name is required", "الاسم الكامل مطلوب"));
+        return;
+      }
+      const phoneDigits = guestPhone.replace(/[^0-9]/g, "");
+      if (phoneDigits.length < 8) {
+        toast.error(t("Valid phone number is required", "رقم هاتف صحيح مطلوب"));
+        return;
+      }
+      if (guestEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) {
+        toast.error(t("Invalid email", "بريد إلكتروني غير صالح"));
+        return;
+      }
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("place-order", {
@@ -76,6 +93,9 @@ const Checkout = () => {
           apartment: apartment || null,
           payment_method: paymentMethod,
           notes: notes || null,
+          guest_name: user ? null : guestName.trim(),
+          guest_phone: user ? null : guestPhone.replace(/[^0-9]/g, ""),
+          guest_email: user ? null : (guestEmail.trim() || null),
         },
       });
 
@@ -84,6 +104,7 @@ const Checkout = () => {
 
       clearCart();
       setOrderNumber(data.order_number);
+      setOrderPhone(data.guest_phone || "");
       toast.success(t("Order placed successfully!", "تم تقديم الطلب بنجاح!"));
     } catch (err: any) {
       toast.error(err.message || t("Failed to place order", "فشل في تقديم الطلب"));
@@ -101,6 +122,37 @@ const Checkout = () => {
         <h1 className="text-2xl font-bold text-foreground mb-8">{t("Checkout", "الدفع")}</h1>
 
         <div className="space-y-6">
+          {/* Guest contact (only if not logged in) */}
+          {!user && (
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-bold text-foreground">{t("Your Contact Info", "بيانات الاتصال الخاصة بك")}</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t("No account needed. The merchant will contact you on this phone.", "لا حاجة لإنشاء حساب. سيتواصل معك التاجر على هذا الرقم.")}
+                  </p>
+                </div>
+                <Link to="/login" className="text-xs text-primary hover:underline whitespace-nowrap">
+                  {t("Have an account?", "لديك حساب؟")}
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground">{t("Full Name", "الاسم الكامل")} *</label>
+                  <Input value={guestName} onChange={(e) => setGuestName(e.target.value)} maxLength={100} required className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">{t("Phone", "الهاتف")} *</label>
+                  <Input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="01xxxxxxxxx" inputMode="tel" maxLength={20} required className="mt-1" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">{t("Email (optional)", "البريد الإلكتروني (اختياري)")}</label>
+                <Input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} type="email" maxLength={254} className="mt-1" />
+              </div>
+            </div>
+          )}
+
           {/* Delivery address */}
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-bold text-foreground">{t("Delivery Address", "عنوان التوصيل")}</h2>
