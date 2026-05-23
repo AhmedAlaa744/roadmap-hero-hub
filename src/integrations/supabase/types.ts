@@ -154,8 +154,11 @@ export type Database = {
           apartment: string | null
           building: string
           created_at: string
-          customer_id: string
+          customer_id: string | null
           floor: string | null
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
           id: string
           notes: string | null
           order_number: string
@@ -169,8 +172,11 @@ export type Database = {
           apartment?: string | null
           building: string
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           floor?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -184,8 +190,11 @@ export type Database = {
           apartment?: string | null
           building?: string
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           floor?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -584,6 +593,38 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      lookup_guest_order: {
+        Args: { _order_number: string; _phone: string }
+        Returns: {
+          apartment: string
+          building: string
+          created_at: string
+          floor: string
+          guest_email: string
+          guest_name: string
+          guest_phone: string
+          id: string
+          notes: string
+          order_number: string
+          payment_method: string
+          status: string
+          store_id: string
+          total: number
+          updated_at: string
+        }[]
+      }
+      lookup_guest_order_items: {
+        Args: { _order_number: string; _phone: string }
+        Returns: {
+          id: string
+          product_id: string
+          product_images: string[]
+          product_name_ar: string
+          product_name_en: string
+          quantity: number
+          unit_price: number
+        }[]
       }
       merchant_active_slot_limit: {
         Args: { _store_id: string }

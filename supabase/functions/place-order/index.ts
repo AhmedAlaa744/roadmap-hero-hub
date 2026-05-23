@@ -18,7 +18,17 @@ interface OrderRequest {
   apartment?: string | null;
   payment_method: "cod" | "online";
   notes?: string | null;
+  // Guest-only fields (ignored if authenticated)
+  guest_name?: string | null;
+  guest_phone?: string | null;
+  guest_email?: string | null;
 }
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,64 +36,63 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Validate user with their JWT
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid session" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Optional auth — guests are allowed
+    let userId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: userData } = await userClient.auth.getUser();
+      if (userData?.user) userId = userData.user.id;
     }
-    const userId = userData.user.id;
 
     const body = (await req.json()) as OrderRequest;
 
     // Basic validation
     if (!body.building || typeof body.building !== "string" || body.building.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Building is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Building is required" }, 400);
     }
     if (!Array.isArray(body.items) || body.items.length === 0) {
-      return new Response(JSON.stringify({ error: "Cart is empty" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Cart is empty" }, 400);
     }
     if (!["cod", "online"].includes(body.payment_method)) {
-      return new Response(JSON.stringify({ error: "Invalid payment method" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Invalid payment method" }, 400);
     }
     for (const it of body.items) {
       if (!it.product_id || typeof it.product_id !== "string") {
-        return new Response(JSON.stringify({ error: "Invalid product id" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "Invalid product id" }, 400);
       }
       if (!Number.isInteger(it.quantity) || it.quantity < 1 || it.quantity > 999) {
-        return new Response(JSON.stringify({ error: "Invalid quantity" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "Invalid quantity" }, 400);
+      }
+    }
+
+    // Guest validation (only required when not authenticated)
+    let guestName: string | null = null;
+    let guestPhone: string | null = null;
+    let guestEmail: string | null = null;
+    if (!userId) {
+      const name = (body.guest_name ?? "").trim();
+      const phoneDigits = (body.guest_phone ?? "").replace(/[^0-9]/g, "");
+      if (name.length < 2 || name.length > 100) {
+        return json({ error: "Full name is required" }, 400);
+      }
+      if (phoneDigits.length < 8 || phoneDigits.length > 20) {
+        return json({ error: "Valid phone number is required" }, 400);
+      }
+      guestName = name;
+      guestPhone = phoneDigits;
+      const email = (body.guest_email ?? "").trim();
+      if (email) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+          return json({ error: "Invalid email" }, 400);
+        }
+        guestEmail = email;
       }
     }
 
@@ -98,29 +107,15 @@ Deno.serve(async (req) => {
       .in("id", productIds);
 
     if (prodErr || !products || products.length !== productIds.length) {
-      return new Response(JSON.stringify({ error: "One or more products not found" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "One or more products not found" }, 400);
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // Validate stock & active
     for (const it of body.items) {
       const p = productMap.get(it.product_id)!;
-      if (!p.is_active) {
-        return new Response(JSON.stringify({ error: "Product unavailable" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (p.stock < it.quantity) {
-        return new Response(JSON.stringify({ error: "Insufficient stock" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (!p.is_active) return json({ error: "Product unavailable" }, 400);
+      if (p.stock < it.quantity) return json({ error: "Insufficient stock" }, 400);
     }
 
     // Group by store
@@ -144,6 +139,9 @@ Deno.serve(async (req) => {
         .from("orders")
         .insert({
           customer_id: userId,
+          guest_name: userId ? null : guestName,
+          guest_phone: userId ? null : guestPhone,
+          guest_email: userId ? null : guestEmail,
           store_id: storeId,
           order_number: orderNum,
           total: group.total,
@@ -168,8 +166,6 @@ Deno.serve(async (req) => {
       const { error: itemsErr } = await admin.from("order_items").insert(items);
       if (itemsErr) throw itemsErr;
 
-      // Decrement stock for each ordered product (best-effort post-write).
-      // The pre-check above + this update keeps stock honest for a community marketplace.
       for (const it of group.items) {
         const p = productMap.get(it.product_id)!;
         const remaining = Math.max(0, Number(p.stock) - it.quantity);
@@ -178,25 +174,20 @@ Deno.serve(async (req) => {
           .update({ stock: remaining })
           .eq("id", it.product_id);
         if (stockErr) console.error("stock decrement failed for", it.product_id, stockErr);
-        // Update in-memory map so concurrent items in the same order don't oversell
         productMap.set(it.product_id, { ...p, stock: remaining });
       }
 
       createdOrderNumbers.push(orderNum);
     }
 
-    return new Response(
-      JSON.stringify({ order_number: baseOrderNum, orders: createdOrderNumbers }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({
+      order_number: baseOrderNum,
+      orders: createdOrderNumbers,
+      guest: !userId,
+      guest_phone: guestPhone,
+    });
   } catch (err) {
     console.error("place-order error:", err);
-    return new Response(
-      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return json({ error: "An unexpected error occurred. Please try again." }, 500);
   }
 });
