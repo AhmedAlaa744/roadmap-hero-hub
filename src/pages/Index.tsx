@@ -74,48 +74,53 @@ const Index = () => {
           <div className="max-w-lg space-y-6 animate-fade-in">
             <p className="text-lg text-primary font-semibold" dir="rtl">جارك — سوق جيرانك</p>
             <h1 className="text-4xl md:text-5xl font-extrabold text-card leading-tight">
-              Shop Local,<br />
-              <span className="text-primary">Trust Your Neighbors</span>
+              {t("Shop Local,", "تسوّق محلي،")}<br />
+              <span className="text-primary">{t("Trust Your Neighbors", "ثق في جيرانك")}</span>
             </h1>
+
             <p className="text-lg text-card/80 font-body">
-              The community marketplace for Dar Misr Al-Andalus. Buy and sell with your neighbors — from fresh food to electronics.
+              {t(
+                "The community marketplace for Dar Misr Al-Andalus. Buy and sell with your neighbors — from fresh food to electronics.",
+                "السوق المجتمعي لكمبوند دار مصر الأندلس. اشترِ وبِع مع جيرانك — من الأكل الطازج للإلكترونيات."
+              )}
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/browse">
                 <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-8">
-                  Start Shopping
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  {t("Start Shopping", "ابدأ التسوق")}
+                  <ArrowRight className="ml-2 h-4 w-4 rtl:rotate-180" />
                 </Button>
               </Link>
               {!authLoading && !user && (
                 <Link to="/login">
                   <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
-                    Log In
+                    {t("Log In", "تسجيل الدخول")}
                   </Button>
                 </Link>
               )}
               {isAdmin && (
                 <Link to="/admin">
                   <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent/10 font-semibold px-8">
-                    Admin Panel
+                    {t("Admin Panel", "لوحة الإدارة")}
                   </Button>
                 </Link>
               )}
               {isMerchant ? (
                 <Link to="/merchant/dashboard">
                   <Button size="lg" variant="outline" className="border-card/30 hover:bg-card/10 font-semibold px-8 text-primary hover:text-primary">
-                    My Dashboard
+                    {t("My Dashboard", "لوحتي")}
                   </Button>
                 </Link>
               ) : (
                 <Link to="/merchant/apply">
                   <Button size="lg" variant="outline" className="border-card/30 hover:bg-card/10 font-semibold px-8 text-primary hover:text-primary">
-                    Become a Seller
+                    {t("Become a Seller", "كن بائعًا")}
                   </Button>
                 </Link>
               )}
             </div>
           </div>
+
         </div>
       </section>
 
