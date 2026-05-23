@@ -74,8 +74,10 @@ const Index = () => {
           <div className="max-w-lg space-y-6 animate-fade-in">
             <p className="text-lg text-primary font-semibold" dir="rtl">جارك — سوق جيرانك</p>
             <h1 className="text-4xl md:text-5xl font-extrabold text-card leading-tight">
-              {t(<>Shop Local,<br /><span className="text-primary">Trust Your Neighbors</span></>, <><span className="text-primary">تسوّق محلي،</span><br />ثق في جيرانك</>) as any}
+              {t("Shop Local,", "تسوّق محلي،")}<br />
+              <span className="text-primary">{t("Trust Your Neighbors", "ثق في جيرانك")}</span>
             </h1>
+
             <p className="text-lg text-card/80 font-body">
               {t(
                 "The community marketplace for Dar Misr Al-Andalus. Buy and sell with your neighbors — from fresh food to electronics.",
