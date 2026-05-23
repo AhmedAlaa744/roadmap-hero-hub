@@ -559,7 +559,27 @@ const MerchantDashboard = () => {
                     }`}>{o.status.replace(/_/g, " ")}</span>
                   </div>
                   <p className="text-primary font-bold">EGP {Number(o.total).toLocaleString()}</p>
+                  {(o.guest_name || o.guest_phone) && (
+                    <div className="mt-2 text-xs text-foreground bg-muted/40 rounded-md px-2 py-1.5 flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{t("Guest", "زائر")}:</span>
+                      {o.guest_name && <span>{o.guest_name}</span>}
+                      {o.guest_phone && (
+                        <>
+                          <span dir="ltr" className="text-muted-foreground">{o.guest_phone}</span>
+                          <a
+                            href={`https://wa.me/${String(o.guest_phone).replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Garak order ${o.order_number}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-auto text-success font-medium hover:underline"
+                          >
+                            WhatsApp →
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">{t("Building", "عمارة")} {o.building}{o.floor ? `, ${t("Floor", "الدور")} ${o.floor}` : ""}{o.apartment ? `, ${t("Apt", "شقة")} ${o.apartment}` : ""}</p>
+
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <label className="text-xs text-muted-foreground">{t("Set status:", "تعيين الحالة:")}</label>
                     <select
