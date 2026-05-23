@@ -19,6 +19,8 @@ import MerchantDashboard from "./pages/MerchantDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import MerchantApply from "./pages/MerchantApply";
 import OrderTracking from "./pages/OrderTracking";
+import TrackOrder from "./pages/TrackOrder";
+
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Help from "./pages/Help";
